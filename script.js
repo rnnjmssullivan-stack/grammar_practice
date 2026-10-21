@@ -104,38 +104,46 @@ function nextCard() {
   }
 
   const name = queue[currentIndex];
-  loadImage(name, 0); // Начинаем проверку с первого расширения (png)
-
   showScreen(playScreen);
-  startCountdown(name);
+  
+  // Сначала прячем картинку и таймер (чтобы не было мигания)
+  cardImage.style.opacity = "0";
+  showTimer(false);
+
+  // Запускаем загрузку и ЖДЕМ её окончания
+  loadImage(name, 0, () => {
+    // Эта функция сработает ТОЛЬКО когда картинка загрузится
+    cardImage.style.opacity = "1"; // Показываем картинку
+    startCountdown(name);          // И только теперь запускаем таймер!
+  });
 }
 
-// Новая функция для умной загрузки картинок
-function loadImage(name, extIndex) {
-  // Если перебрали все расширения (png, jpg), но ничего не нашли
+// Обновленная функция загрузки картинки (добавили колбэк onSuccess)
+function loadImage(name, extIndex, onSuccess) {
   if (extIndex >= IMAGE_EXTS.length) {
     console.warn("Не найдена картинка для:", name);
+    // Если картинки вообще нет, все равно запускаем таймер, чтобы раунд не завис
+    if (onSuccess) onSuccess(); 
     return;
   }
 
   const ext = IMAGE_EXTS[extIndex];
   const src = `${IMAGES_DIR}/${name}.${ext}`;
 
-  // Создаем виртуальную картинку в памяти, чтобы проверить, существует ли файл
   const img = new Image();
   
   img.onload = () => {
-    // Если файл существует и загрузился — ставим его на экран
     cardImage.src = src;
     cardImage.alt = name;
+    // Сообщаем, что картинка загружена!
+    if (onSuccess) onSuccess();
   };
 
   img.onerror = () => {
-    // Если файл с таким расширением не найден — пробуем следующее
-    loadImage(name, extIndex + 1);
+    loadImage(name, extIndex + 1, onSuccess);
   };
 
-  img.src = src; // Запускаем проверку
+  img.src = src;
 }
 
 
