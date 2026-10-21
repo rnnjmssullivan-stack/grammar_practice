@@ -101,6 +101,41 @@ function nextCard() {
   }
 
   const name = queue[currentIndex];
+  loadImage(name, 0); // Начинаем проверку с первого расширения (png)
+
+  showScreen(playScreen);
+  startCountdown(name);
+}
+
+// Новая функция для умной загрузки картинок
+function loadImage(name, extIndex) {
+  // Если перебрали все расширения (png, jpg), но ничего не нашли
+  if (extIndex >= IMAGE_EXTS.length) {
+    console.warn("Не найдена картинка для:", name);
+    return;
+  }
+
+  const ext = IMAGE_EXTS[extIndex];
+  const src = `${IMAGES_DIR}/${name}.${ext}`;
+
+  // Создаем виртуальную картинку в памяти, чтобы проверить, существует ли файл
+  const img = new Image();
+  
+  img.onload = () => {
+    // Если файл существует и загрузился — ставим его на экран
+    cardImage.src = src;
+    cardImage.alt = name;
+  };
+
+  img.onerror = () => {
+    // Если файл с таким расширением не найден — пробуем следующее
+    loadImage(name, extIndex + 1);
+  };
+
+  img.src = src; // Запускаем проверку
+}
+
+  const name = queue[currentIndex];
   cardImage.src = `${IMAGES_DIR}/${name}.${IMAGE_EXTS[i]}`;
   cardImage.alt = name;
 
