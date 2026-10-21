@@ -122,7 +122,6 @@ function nextCard() {
 function loadImage(name, extIndex, onSuccess) {
   if (extIndex >= IMAGE_EXTS.length) {
     console.warn("Не найдена картинка для:", name);
-    // Если картинки вообще нет, все равно запускаем таймер, чтобы раунд не завис 
     if (onSuccess) onSuccess(); 
     return;
   }
@@ -133,10 +132,16 @@ function loadImage(name, extIndex, onSuccess) {
   const img = new Image();
   
   img.onload = () => {
+    // 1. Сначала ставим новый источник картинки
     cardImage.src = src;
     cardImage.alt = name;
-    // Сообщаем, что картинка загружена!
-    if (onSuccess) onSuccess();
+
+    // 2. Ждем, пока браузер отрисует новый src (requestAnimationFrame)
+    // И только потом показываем картинку и запускаем таймер
+    requestAnimationFrame(() => {
+      cardImage.style.opacity = "1";
+      if (onSuccess) onSuccess();
+    });
   };
 
   img.onerror = () => {
