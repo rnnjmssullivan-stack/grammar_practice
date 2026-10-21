@@ -3,13 +3,13 @@
 //  Если добавишь новую — просто допиши имя в массив.
 // ============================================================
 const IMAGE_NAMES = [
-  //"ball", "boat", "boy", "car", "cat", "computer",
-  //"dog", "doll", "fan", "fish", "game", "girl", "hat", "man", "mat",
-  //"teddy", "train", "van",
+  "ball", "boat", "boy", "car", "cat", "computer",
+  "dog", "doll", "fan", "fish", "game", "girl", "hat", "man", "mat",
+  "teddy", "train", "van",
   
-  "very_big", "big", "small", "very_small"//,
+  "very_big", "big", "small", "very_small",
   
-  //"pink", "green", "brown", "orange", "purple", "yellow", "black", "white", "blue", "gray", "red"
+  "pink", "green", "brown", "orange", "purple", "yellow", "black", "white", "blue", "gray", "red"
 ];
 
 // Папки (относительно index.html)
