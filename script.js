@@ -16,7 +16,7 @@ const AUDIO_DIR  = "audio";
 
 // Расширения, которые пробуем для аудио (по порядку)
 const AUDIO_EXTS = ["mp3", "m4a"];
-const IMAGE_EXT  = "png";
+const IMAGE_EXT  = ["png", "jpg"];
 
 // ============================================================
 //  DOM
