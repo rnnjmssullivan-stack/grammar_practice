@@ -122,7 +122,7 @@ function nextCard() {
 function loadImage(name, extIndex, onSuccess) {
   if (extIndex >= IMAGE_EXTS.length) {
     console.warn("Не найдена картинка для:", name);
-    // Если картинки вообще нет, все равно запускаем таймер, чтобы раунд не завис
+    // Если картинки вообще нет, все равно запускаем таймер, чтобы раунд не завис 
     if (onSuccess) onSuccess(); 
     return;
   }
