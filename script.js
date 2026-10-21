@@ -93,7 +93,18 @@ function setTimerText(text, warning = false) {
 function startRound() {
   queue = shuffle(IMAGE_NAMES);
   currentIndex = -1;
-  nextCard();
+  
+  // Прогреваем кэш браузера: проходимся по всем картинкам
+  // и используем нашу умную loadImage, но с пустым колбэком (нам не нужно ничего запускать)
+  IMAGE_NAMES.forEach(name => {
+    loadImage(name, 0, () => {}); 
+  });
+
+  // Небольшая задержка в 300мс, чтобы первые картинки успели закешироваться, 
+  // и сразу показываем первую
+  setTimeout(() => {
+    nextCard();
+  }, 300); 
 }
 
 function nextCard() {
@@ -132,15 +143,14 @@ function loadImage(name, extIndex, onSuccess) {
   const img = new Image();
   
   img.onload = () => {
-    // 1. Сначала ставим новый источник картинки
     cardImage.src = src;
     cardImage.alt = name;
 
-    // 2. Ждем, пока браузер отрисует новый src (requestAnimationFrame)
-    // И только потом показываем картинку и запускаем таймер
+    // Даем браузеру время перерисовать кадр с новой картинкой
     requestAnimationFrame(() => {
-      cardImage.style.opacity = "1";
-      if (onSuccess) onSuccess();
+      requestAnimationFrame(() => {
+        if (onSuccess) onSuccess();
+      });
     });
   };
 
