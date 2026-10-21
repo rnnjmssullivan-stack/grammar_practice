@@ -250,40 +250,37 @@ function endRound() {
 }
 
 // ============================================================
-//  Управление пробелом
+//  Управление (Пробел для ПК, Тап для телефона)
 // ============================================================
+
+// Единая функция для запуска действий
+function handleAction() {
+  if (phase === "start") {
+    startRound();
+  } else if (phase === "ready") {
+    nextCard();
+  } else if (phase === "end") {
+    startRound();
+  }
+}
+
+// 1. Обработка клавиатуры (Пробел)
 document.addEventListener("keydown", (e) => {
   if (e.code !== "Space") return;
-  e.preventDefault();
+  e.preventDefault(); // чтобы страница не скроллилась
 
-  // Фокус в input — не мешаем
+  // Если фокус в поле ввода секунд — не мешаем
   if (document.activeElement === secondsInput) return;
 
-  if (phase === "start") {
-    startRound();
-  } else if (phase === "ready") {
-    nextCard();
-  } else if (phase === "end") {
-    startRound();
-  }
-  // во время "counting" и "audio" пробел игнорируется
+  handleAction();
 });
 
-// ============================================================
-//  Управление касанием (для телефонов и планшетов)
-// ============================================================
-document.addEventListener("click", (e) => {
-  // Игнорируем клики по инпуту (настройка таймера) и по подсказке звука
+// 2. Обработка касаний и кликов (для телефона и мышки)
+document.addEventListener("pointerdown", (e) => {
+  // Игнорируем клики по полю ввода и по подсказке звука
   if (e.target.tagName === "INPUT" || e.target.id === "soundHint") return;
 
-  // Логика точно такая же, как у пробела
-  if (phase === "start") {
-    startRound();
-  } else if (phase === "ready") {
-    nextCard();
-  } else if (phase === "end") {
-    startRound();
-  }
+  handleAction();
 });
 
 // ============================================================
