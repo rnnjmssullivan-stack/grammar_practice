@@ -5,9 +5,8 @@
 const IMAGE_NAMES = [
   "ball", "big", "boat", "boy", "car", "cat", "computer",
   "dog", "doll", "fan", "fish", "game", "girl", "hat", "man", "mat",
-  "small", "teddy", "train", "van", "very_small", 
-  
-  "pink", "green", "brown", "orange", "purple", "yellow", "black", "white", "blue", "gray", "red"
+  "small", "teddy", "train", "van", "very_small", "pink", "green", 
+  "brown", "orange", "purple", "yellow", "black", "white", "blue", "gray", "red"
 ];
 
 // Папки (относительно index.html)
@@ -16,7 +15,7 @@ const AUDIO_DIR  = "audio";
 
 // Расширения, которые пробуем для аудио (по порядку)
 const AUDIO_EXTS = ["mp3", "m4a"];
-const IMAGE_EXT  = ["png", "jpg"];
+const IMAGE_EXTS  = ["png", "jpg"];
 
 // ============================================================
 //  DOM
@@ -102,7 +101,7 @@ function nextCard() {
   }
 
   const name = queue[currentIndex];
-  cardImage.src = `${IMAGES_DIR}/${name}.${IMAGE_EXT}`;
+  cardImage.src = `${IMAGES_DIR}/${name}.${IMAGE_EXTS[i]}`;
   cardImage.alt = name;
 
   showScreen(playScreen);
