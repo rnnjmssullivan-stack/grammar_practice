@@ -135,13 +135,6 @@ function loadImage(name, extIndex) {
   img.src = src; // Запускаем проверку
 }
 
-  const name = queue[currentIndex];
-  cardImage.src = `${IMAGES_DIR}/${name}.${IMAGE_EXTS[i]}`;
-  cardImage.alt = name;
-
-  showScreen(playScreen);
-  startCountdown(name);
-}
 
 function startCountdown(name) {
   phase = "counting";
