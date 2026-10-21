@@ -137,6 +137,10 @@ function loadImage(name, extIndex) {
 
 
 function startCountdown(name) {
+
+  // останавливаем предыдущий таймер, если он был
+  if (countdownTimer) clearInterval(countdownTimer);
+  
   phase = "counting";
   const total = getSeconds();
   let left = total;
