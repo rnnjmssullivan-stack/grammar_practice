@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grammar Practice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Боковая панель (Меню) -->
+  <div id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <h2>Меню / Menu</h2>
+      <button id="closeSidebar" class="close-btn">×</button>
+    </div>
+    
+    <div class="menu-section">
+      <h3>Упражнения / Exercises</h3>
+      <div id="exerciseMenu" class="menu-list"></div>
+    </div>
+
+    <div class="menu-section">
+      <h3>Слова / Words</h3>
+      <div id="lessonMenu" class="menu-list"></div>
+    </div>
+
+    <div class="menu-section bottom-settings">
+      <h3>Настройки / Settings</h3>
+      <label class="setting">
+        <span>Секунд / Seconds:</span>
+        <input id="secondsInput" type="number" min="1" max="60" value="5">
+      </label>
+      <label class="setting checkbox-setting">
+        <input type="checkbox" id="showTextToggle">
+        <span>Показывать текст / Show text</span>
+      </label>
+      <label class="setting">
+        <span>Язык / Lang:</span>
+        <select id="langSelect">
+          <option value="ru">RU</option>
+          <option value="en">EN</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Затемнение фона при открытом меню -->
+  <div id="sidebarOverlay" class="overlay"></div>
+
+  <!-- Верхняя панель с кнопкой меню -->
+  <header class="topbar">
+    <button id="openSidebar" class="menu-btn">☰</button>
+    <div class="current-info">
+      <span id="currentExerciseTitle">Words</span> | <span id="currentLessonTitle">All</span>
+    </div>
+  </header>
+
+  <!-- Сцена -->
+  <main class="stage">
+    <!-- Стартовый экран -->
+    <section id="startScreen" class="screen active">
+      <h1>🎯 Grammar Practice</h1>
+      <p class="hint">
+        Нажми <b>Пробел</b> или коснись экрана, чтобы начать<br>
+        <span class="en">Press <b>Space</b> or tap the screen to start</span>
+      </p>
+    </section>
+
+    <!-- Экран с карточкой -->
+    <section id="playScreen" class="screen">
+      <div class="card-container">
+        <!-- Контейнер для картинки (и значков во 2 упр) -->
+        <div class="image-wrapper">
+          <img id="cardImage" alt="">
+          <!-- Значок для упражнения #2 -->
+          <div id="cardIcon" class="card-icon hidden"></div>
+        </div>
+        
+        <!-- Текст подсказки / ответа -->
+        <div id="textDisplay" class="text-display hidden"></div>
+      </div>
+    </section>
+
+    <!-- Финал -->
+    <section id="endScreen" class="screen">
+      <h1>Do you want to start a new round?</h1>
+      <p class="hint">
+        Начать новый раунд? Нажми на экран<br>
+        <span class="en">Tap the screen to start a new round</span>
+      </p>
+    </section>
+
+    <!-- Сбоку таймер -->
+    <aside id="timerBox" class="timer hidden">
+      <div id="timerValue">00</div>
+      <div class="timer-label">сек / sec</div>
+    </aside>
+  </main>
+
+  <div id="soundHint" class="sound-hint hidden">
+    🔇 Нажми, чтобы разрешить звук / Tap to allow sound
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #ffffff;
+  color: #222;
+  overflow: hidden;
+}
+
+/* ---------- Боковая панель ---------- */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 300px;
+  height: 100%;
+  background: #f8f9fa;
+  border-right: 1px solid #ddd;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar.open { transform: translateX(0); }
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+}
+.close-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+}
+
+.menu-section {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+.menu-section h3 {
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.menu-list { display: flex; flex-direction: column; gap: 8px; }
+.menu-item {
+  padding: 10px 15px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  text-align: left;
+  transition: all 0.2s;
+}
+.menu-item:hover { background: #eef; }
+.menu-item.active {
+  background: #222;
+  color: #fff;
+  border-color: #222;
+}
+
+.bottom-settings {
+  margin-top: auto; /* Прижимаем к низу */
+  border-bottom: none;
+  border-top: 1px solid #ddd;
+}
+
+.setting {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.setting input[type="number"] {
+  width: 60px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+}
+.checkbox-setting { justify-content: flex-start; gap: 8px; cursor: pointer; }
+
+/* Затемнение */
+.overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 90;
+}
+.overlay.active { opacity: 1; pointer-events: auto; }
+
+/* ---------- Верхняя панель ---------- */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  z-index: 10;
+}
+.menu-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+}
+.current-info {
+  font-size: 14px;
+  color: #666;
+}
+
+/* ---------- Сцена ---------- */
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding-top: 60px; /* Отступ под topbar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen {
+  display: none;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+.screen.active { display: flex; }
+
+h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
+.hint { font-size: clamp(16px, 2.2vw, 22px); color: #555; line-height: 1.5; }
+.hint .en { color: #999; font-size: 0.9em; }
+
+/* ---------- Карточка ---------- */
+.card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.image-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 80vw;
+  max-height: 70vh;
+}
+
+#cardImage {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  display: block;
+}
+
+/* Значок для упражнения #2 */
+.card-icon {
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  font-size: 60px;
+  background: #fff;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  border: 4px solid #fff;
+}
+.card-icon.hidden { display: none; }
+
+/* Текст подсказки/ответа */
+.text-display {
+  margin-top: 30px;
+  font-size: clamp(18px, 3vw, 32px);
+  color: #333;
+  font-weight: 500;
+  max-width: 80vw;
+  text-align: center;
+  line-height: 1.4;
+}
+.text-display.hidden { display: none; }
+
+/* ---------- Таймер ---------- */
+.timer {
+  position: fixed;
+  top: 50%;
+  right: 30px;
+  transform: translateY(-50%);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  pointer-events: none;
+  z-index: 5;
+}
+.timer.hidden { display: none; }
+
+#timerValue {
+  font-size: clamp(48px, 8vw, 120px);
+  font-weight: 700;
+  line-height: 1;
+  color: #333;
+  transition: color 0.2s;
+}
+#timerValue.warning { color: #e63946; }
+
+.timer-label {
+  font-size: 14px;
+  color: #999;
+  margin-top: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ---------- Подсказка про звук ---------- */
+.sound-hint {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 30px;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 20;
+}
+.sound-hint.hidden { display: none; }
