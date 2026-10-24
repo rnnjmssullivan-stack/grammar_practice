@@ -17,6 +17,14 @@ let state = {
 };
 
 // ============================================================
+//  ПУТИ И РАСШИРЕНИЯ (перенесли сюда из старого кода)
+// ============================================================
+const IMAGES_DIR = "images";
+const AUDIO_DIR  = "audio";
+const IMAGE_EXTS = ["png", "jpg"];
+const AUDIO_EXTS = ["mp3", "m4a"];
+
+// ============================================================
 //  DOM
 // ============================================================
 const dom = {
@@ -42,6 +50,7 @@ const dom = {
   
   timerBox: document.getElementById('timerBox'),
   timerValue: document.getElementById('timerValue'),
+  //timerLabel: document.querySelector('.timer-label'),
   soundHint: document.getElementById('soundHint')
 };
 
@@ -129,7 +138,6 @@ function applyLanguage() {
   dom.startScreen.querySelector('.hint').innerHTML = `${t.startHint}<br><span class="en">${t.startHint}</span>`;
   dom.endScreen.querySelector('.hint').innerHTML = `${t.endHint}<br><span class="en">${t.endHint}</span>`;
   
-  dom.timerLabel.textContent = t.timerLabel;
   
   renderMenus();
   updateCurrentInfo();
