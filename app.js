@@ -278,22 +278,32 @@ function nextCard() {
     });
     
   } else if (state.exercise === 'sentences') {
-    // Картинка + значок, или аудио-интонация
-    // В этой версии мы сделаем случайный выбор: значок (plus, minus, question)
-    // (Позже можно добавить аудио-интонацию)
-    
-    const signs = ['plus', 'minus', 'question'];
+    const signs = ['plus_long', 'plus_short', 'minus', 'question'];
     const sign = signs[Math.floor(Math.random() * signs.length)];
     
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
       
-      // Показываем значок
-      dom.cardIcon.textContent = sign === 'plus' ? '➕' : sign === 'minus' ? '➖' : '❓';
+      // Очищаем старые классы
+      dom.cardIcon.className = 'card-icon'; 
+      
+      if (sign === 'plus_long') {
+        dom.cardIcon.textContent = '➕';
+        dom.cardIcon.classList.add('icon-plus-long');
+      } else if (sign === 'plus_short') {
+        dom.cardIcon.textContent = '➕';
+        dom.cardIcon.classList.add('icon-plus-short');
+      } else if (sign === 'minus') {
+        dom.cardIcon.textContent = '➖';
+        dom.cardIcon.classList.add('icon-minus');
+      } else {
+        dom.cardIcon.textContent = '❓';
+        dom.cardIcon.classList.add('icon-question');
+      }
+      
       dom.cardIcon.classList.remove('hidden');
       
-      // Запускаем таймер
-      startCountdown(name, 'sentences');
+      startCountdown(name, 'sentences', sign);
     });
     
   } else if (state.exercise === 'answers') {
