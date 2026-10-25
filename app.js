@@ -342,32 +342,37 @@ function startCountdown(name, exerciseType, sign = null) {
       let textToShow = '';
       
       if (exerciseType === 'answers') {
-        audioName = `answer_${name}`;
-        textToShow = NEGATIVE[name] || '';
+        // 3-е упражнение (Ответы): пока играем вопрос
+        audioName = `${name} - Is_it`;
+        textToShow = QUESTION[name] || '';
       } else if (exerciseType === 'sentences') {
+        // 2-е упражнение (Предложения): смотрим на знак
         if (sign === 'plus_long') {
-          audioName = `It is`; 
+          audioName = `${name} - It_is`;
           textToShow = AFFIRMATIVE_LONG[name] || '';
         } else if (sign === 'plus_short') {
-          audioName = `It's`; 
+          audioName = `${name} - Its`;
           textToShow = AFFIRMATIVE_SHORT[name] || '';
         } else if (sign === 'minus') {
-          audioName = `negative_${name}`; 
+          audioName = `${name} - It_isnt`;
           textToShow = NEGATIVE[name] || '';
         } else {
-          audioName = `question_${name}`;
+          audioName = `${name} - Is_it`;
           textToShow = QUESTION[name] || '';
         }
       } else {
+        // 1-е упражнение (Слова)
         audioName = name;
         textToShow = name;
       }
 
+      // Показываем текст на экране (если включена галочка)
       if (state.showText) {
         dom.textDisplay.textContent = textToShow;
         dom.textDisplay.classList.remove('hidden');
       }
 
+      // Запускаем аудио
       playAudio(audioName, () => { 
         state.phase = 'ready'; 
       });
