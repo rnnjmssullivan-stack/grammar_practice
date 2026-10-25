@@ -320,7 +320,7 @@ function nextCard() {
 // ============================================================
 //  ТАЙМЕР
 // ============================================================
-function startCountdown(name, exerciseType) {
+function startCountdown(name, exerciseType, sign = null) {
   if (state.countdownTimer) clearInterval(state.countdownTimer);
   
   state.phase = 'counting';
@@ -338,34 +338,41 @@ function startCountdown(name, exerciseType) {
       clearInterval(state.countdownTimer);
       state.countdownTimer = null;
       
-      // Время вышло! Играем аудио ответа.
+      let audioName = '';
+      let textToShow = '';
+      
       if (exerciseType === 'answers') {
-        playAudio(`answer_${name}`, () => { 
-          state.phase = 'ready'; 
-          if (state.showText) showAnswerText(name);
-        });
+        audioName = `answer_${name}`;
+        textToShow = NEGATIVE[name] || '';
       } else if (exerciseType === 'sentences') {
-        // Тут логика для предложений: аудио ответа
-        playAudio(`answer_${name}`, () => { 
-          state.phase = 'ready'; 
-        });
+        if (sign === 'plus_long') {
+          audioName = `It is`; 
+          textToShow = AFFIRMATIVE_LONG[name] || '';
+        } else if (sign === 'plus_short') {
+          audioName = `It's`; 
+          textToShow = AFFIRMATIVE_SHORT[name] || '';
+        } else if (sign === 'minus') {
+          audioName = `negative_${name}`; 
+          textToShow = NEGATIVE[name] || '';
+        } else {
+          audioName = `question_${name}`;
+          textToShow = QUESTION[name] || '';
+        }
       } else {
-        // Для слов (exercise #1)
-        playAudio(name, () => { 
-          state.phase = 'ready'; 
-          if (state.showText) showAnswerText(name, 'words');
-        });
+        audioName = name;
+        textToShow = name;
       }
+
+      if (state.showText) {
+        dom.textDisplay.textContent = textToShow;
+        dom.textDisplay.classList.remove('hidden');
+      }
+
+      playAudio(audioName, () => { 
+        state.phase = 'ready'; 
+      });
     }
   }, 1000);
-}
-
-function showAnswerText(name, type = 'answers') {
-  const data = GRAMMAR_DB[name];
-  if (data) {
-    dom.textDisplay.textContent = type === 'words' ? name : data.affirmative;
-    dom.textDisplay.classList.remove('hidden');
-  }
 }
 
 // ============================================================
