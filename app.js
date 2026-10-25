@@ -250,6 +250,8 @@ function startRound() {
     });
   });
 
+  dom.cardIcon.classList.add('hidden');
+  
   setTimeout(() => nextCard(), 300);
 }
 
