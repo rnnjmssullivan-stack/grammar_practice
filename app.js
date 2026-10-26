@@ -269,24 +269,34 @@ function nextCard() {
   dom.cardImage.src = '';
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
+  dom.cardImage.classList.remove('crossed-image'); // Убираем перечеркивание с прошлой картинки
   showTimer(false);
 
   // Логика в зависимости от упражнения
   if (state.exercise === 'words') {
-    // Просто картинка
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
       startCountdown(name, 'words');
     });
     
-  } else if (state.exercise === 'sentences') {
-    const signs = ['plus_long', 'plus_short', 'minus', 'question'];
-    const sign = signs[Math.floor(Math.random() * signs.length)];
+  } else if (state.exercise.startsWith('sent_')) {
+    // Упражнения 2.1 - 2.5
+    let sign = '';
+    
+    // Если это 2.5 (всё вместе) — выбираем случайно
+    if (state.exercise === 'sent_mix') {
+      const signs = ['plus_long', 'plus_short', 'minus', 'question'];
+      sign = signs[Math.floor(Math.random() * signs.length)];
+    } else {
+      // Иначе жестко задаем знак
+      if (state.exercise === 'sent_long') sign = 'plus_long';
+      if (state.exercise === 'sent_short') sign = 'plus_short';
+      if (state.exercise === 'sent_neg') sign = 'minus';
+      if (state.exercise === 'sent_quest') sign = 'question';
+    }
     
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
-      
-      // Очищаем старые классы
       dom.cardIcon.className = 'card-icon'; 
       
       if (sign === 'plus_long') {
@@ -304,25 +314,23 @@ function nextCard() {
       }
       
       dom.cardIcon.classList.remove('hidden');
-      
       startCountdown(name, 'sentences', sign);
     });
     
   } else if (state.exercise === 'answers') {
-    // Показываем картинку и играем вопрос (аудио)
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
       
-      const data = GRAMMAR_DB[name];
+      // ДОБАВЛЯЕМ ПЕРЕЧЕРКИВАНИЕ для 3-го упражнения
+      dom.cardImage.classList.add('crossed-image');
       
-      // Показываем текст вопроса (если включено)
+      const data = GRAMMAR_DB[name];
       if (state.showText && data) {
         dom.textDisplay.textContent = data.question;
         dom.textDisplay.classList.remove('hidden');
       }
       
-      // Воспроизводим аудио вопроса, затем запускаем таймер
-      playAudio(`question_${name}`, () => {
+      playAudio(`${name} - Is_it`, () => {
         startCountdown(name, 'answers');
       });
     });
