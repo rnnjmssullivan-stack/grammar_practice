@@ -2,22 +2,21 @@
 //  ГЛОБАЛЬНОЕ СОСТОЯНИЕ
 // ============================================================
 let state = {
-  lang: 'ru',            // 'ru' или 'en'
-  exercise: 'words',     // 'words', 'sentences', 'answers'
-  lesson: 'all',         // 'all' или id урока (например, 'unit1')
+  lang: 'ru',
+  exercise: 'words',
+  lesson: 'all',
   seconds: 5,
   showText: false,
   
-  // Игровое состояние
   queue: [],
   currentIndex: -1,
-  phase: 'start',        // start | waiting | counting | audio | ready | end
+  phase: 'start',
   countdownTimer: null,
   audioEl: null
 };
 
 // ============================================================
-//  ПУТИ И РАСШИРЕНИЯ (перенесли сюда из старого кода)
+//  ПУТИ И РАСШИРЕНИЯ
 // ============================================================
 const IMAGES_DIR = "images";
 const AUDIO_DIR  = "audio";
@@ -51,8 +50,6 @@ const dom = {
   timerBox: document.getElementById('timerBox'),
   timerBar: document.getElementById('timerBar'),
   replayBtn: document.getElementById('replayBtn'), 
-  timerValue: document.getElementById('timerValue'),
-  //timerLabel: document.querySelector('.timer-label'),
   soundHint: document.getElementById('soundHint')
 };
 
@@ -60,7 +57,6 @@ const dom = {
 //  ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА
 // ============================================================
 function initUI() {
-  // Загружаем настройки
   const savedSeconds = localStorage.getItem('grammar.seconds');
   if (savedSeconds) state.seconds = parseInt(savedSeconds);
   dom.secondsInput.value = state.seconds;
@@ -71,14 +67,12 @@ function initUI() {
     dom.langSelect.value = savedLang;
   }
 
-  // Рендерим меню
   renderMenus();
   applyLanguage();
   updateCurrentInfo();
 }
 
 function renderMenus() {
-  // Упражнения
   dom.exerciseMenu.innerHTML = '';
   EXERCISES.forEach(ex => {
     const btn = document.createElement('button');
@@ -94,10 +88,7 @@ function renderMenus() {
     dom.exerciseMenu.appendChild(btn);
   });
 
-  // Уроки (Слова)
   dom.lessonMenu.innerHTML = '';
-  
-  // Кнопка "Все слова"
   const allBtn = document.createElement('button');
   allBtn.className = `menu-item ${state.lesson === 'all' ? 'active' : ''}`;
   allBtn.textContent = UI_TEXT[state.lang].allWords;
@@ -110,7 +101,6 @@ function renderMenus() {
   };
   dom.lessonMenu.appendChild(allBtn);
 
-  // Кнопки уроков
   Object.keys(LESSONS).forEach(unitId => {
     const unit = LESSONS[unitId];
     const btn = document.createElement('button');
@@ -129,17 +119,17 @@ function renderMenus() {
 
 function applyLanguage() {
   const t = UI_TEXT[state.lang];
-  document.querySelector('.sidebar-header h2').textContent = t.menu;
-  document.querySelector('.menu-section:nth-of-type(1) h3').textContent = t.exercises;
-  document.querySelector('.menu-section:nth-of-type(2) h3').textContent = t.words;
-  document.querySelector('.bottom-settings h3').textContent = t.settings;
-  document.querySelector('.setting span').textContent = t.seconds;
-  document.querySelector('.checkbox-setting span').textContent = t.showText;
+  const headers = document.querySelectorAll('.menu-section h3');
+  if (headers[0]) headers[0].textContent = t.exercises;
+  if (headers[1]) headers[1].textContent = t.words;
+  if (headers[2]) headers[2].textContent = t.settings;
   
-  // Обновляем подсказки на экранах
+  const settingSpans = document.querySelectorAll('.setting span');
+  if (settingSpans[0]) settingSpans[0].textContent = t.seconds;
+  if (settingSpans[1]) settingSpans[1].textContent = t.showText;
+  
   dom.startScreen.querySelector('.hint').innerHTML = `${t.startHint}<br><span class="en">${t.startHint}</span>`;
   dom.endScreen.querySelector('.hint').innerHTML = `${t.endHint}<br><span class="en">${t.endHint}</span>`;
-  
   
   renderMenus();
   updateCurrentInfo();
@@ -201,7 +191,6 @@ dom.overlay.onclick = closeSidebar;
 // ============================================================
 function getActiveWords() {
   if (state.lesson === 'all') {
-    // Собираем все слова из всех уроков
     let all = [];
     Object.values(LESSONS).forEach(u => all.push(...u.words));
     return all;
@@ -225,8 +214,10 @@ function resetToStart() {
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
   
   dom.cardImage.src = '';
+  dom.cardImage.classList.remove('crossed-image');
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
+  dom.replayBtn.classList.add('hidden');
   
   showScreen('startScreen');
   showTimer(false);
@@ -240,11 +231,9 @@ function startRound() {
     return;
   }
 
-  // Перемешиваем и убираем дубликаты (если "all")
   state.queue = shuffle([...new Set(words)]);
   state.currentIndex = -1;
   
-  // Прогрев кэша (Under the hood)
   state.queue.forEach(name => {
     IMAGE_EXTS.forEach(ext => {
       const img = new Image();
@@ -269,12 +258,12 @@ function nextCard() {
   
   dom.cardImage.style.visibility = 'hidden';
   dom.cardImage.src = '';
+  dom.cardImage.classList.remove('crossed-image');
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
-  dom.cardImage.classList.remove('crossed-image'); // Убираем перечеркивание с прошлой картинки
+  dom.replayBtn.classList.add('hidden');
   showTimer(false);
 
-  // Логика в зависимости от упражнения
   if (state.exercise === 'words') {
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
@@ -282,15 +271,12 @@ function nextCard() {
     });
     
   } else if (state.exercise.startsWith('sent_')) {
-    // Упражнения 2.1 - 2.5
     let sign = '';
     
-    // Если это 2.5 (всё вместе) — выбираем случайно
     if (state.exercise === 'sent_mix') {
       const signs = ['plus_long', 'plus_short', 'minus', 'question'];
       sign = signs[Math.floor(Math.random() * signs.length)];
     } else {
-      // Иначе жестко задаем знак
       if (state.exercise === 'sent_long') sign = 'plus_long';
       if (state.exercise === 'sent_short') sign = 'plus_short';
       if (state.exercise === 'sent_neg') sign = 'minus';
@@ -299,6 +285,14 @@ function nextCard() {
     
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
+      
+      // Перечеркивание для минуса!
+      if (sign === 'minus') {
+        dom.cardImage.classList.add('crossed-image');
+      } else {
+        dom.cardImage.classList.remove('crossed-image');
+      }
+      
       dom.cardIcon.className = 'card-icon'; 
       
       if (sign === 'plus_long') {
@@ -323,12 +317,12 @@ function nextCard() {
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
       
-      // ДОБАВЛЯЕМ ПЕРЕЧЕРКИВАНИЕ для 3-го упражнения
-      dom.cardImage.classList.add('crossed-image');
+      // Убрали перечеркивание для 3-го упражнения
+      dom.cardImage.classList.remove('crossed-image'); 
       
-      const data = GRAMMAR_DB[name];
+      const data = QUESTION[name];
       if (state.showText && data) {
-        dom.textDisplay.textContent = data.question;
+        dom.textDisplay.textContent = data;
         dom.textDisplay.classList.remove('hidden');
       }
       
@@ -349,7 +343,6 @@ function startCountdown(name, exerciseType, sign = null) {
   let left = state.seconds;
   const total = state.seconds;
   
-  // Запоминаем правильное аудио и текст для текущей карточки
   state.currentAudioName = '';
   state.currentText = '';
   
@@ -366,41 +359,35 @@ function startCountdown(name, exerciseType, sign = null) {
     state.currentText = name;
   }
 
-  // Настраиваем столбик
   showTimer(true);
   dom.timerBar.style.height = '100%';
   dom.timerBar.classList.remove('danger');
-  dom.replayBtn.classList.add('hidden'); // Скрываем микрофон во время отсчета
-  dom.textDisplay.classList.add('hidden'); // Скрываем текст до конца таймера
+  dom.replayBtn.classList.add('hidden');
+  dom.textDisplay.classList.add('hidden');
 
   state.countdownTimer = setInterval(() => {
     left--;
     
     if (left > 0) {
-      // Обновляем высоту столбика
       const percent = (left / total) * 100;
       dom.timerBar.style.height = `${percent}%`;
       
-      // Если осталось 2 секунды — делаем красным
       if (left <= 2) {
         dom.timerBar.classList.add('danger');
       }
     } else {
-      // Время вышло!
       dom.timerBar.style.height = '0%';
       clearInterval(state.countdownTimer);
       state.countdownTimer = null;
       
-      // Показываем текст (если включено)
       if (state.showText) {
         dom.textDisplay.textContent = state.currentText;
         dom.textDisplay.classList.remove('hidden');
       }
 
-      // Включаем аудио
       playAudio(state.currentAudioName, () => { 
         state.phase = 'ready'; 
-        dom.replayBtn.classList.remove('hidden'); // Показываем микрофон
+        dom.replayBtn.classList.remove('hidden');
       });
     }
   }, 1000);
@@ -454,7 +441,6 @@ function playAudio(audioName, onFinish) {
     const src = `${AUDIO_DIR}/${audioName}.${AUDIO_EXTS[i]}`;
     const audio = new Audio();
     
-    // Сохраняем данные для кнопки повтора
     state.currentAudioObj = audio;
 
     const timeout = setTimeout(() => {
@@ -499,15 +485,9 @@ function showTimer(show) {
   dom.timerBox.classList.toggle('hidden', !show);
 }
 
-function setTimerText(text, warning = false) {
-  dom.timerValue.textContent = text;
-  dom.timerValue.classList.toggle('warning', warning);
-}
-
 function endRound() {
   state.phase = 'end';
   showTimer(false);
-  setTimerText('00', false);
   showScreen('endScreen');
 }
 
@@ -542,7 +522,7 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('pointerdown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
-      e.target.closest('.sidebar') || e.target.id === 'soundHint') return;
+      e.target.closest('.sidebar') || e.target.id === 'soundHint' || e.target.closest('.replay-btn')) return;
   handleAction();
 });
 
@@ -550,9 +530,9 @@ document.addEventListener('pointerdown', (e) => {
 //  КНОПКА ПОВТОРА АУДИО
 // ============================================================
 dom.replayBtn.addEventListener('pointerdown', (e) => {
-  e.stopPropagation(); // Чтобы клик по кнопке не запускал следующую карточку
+  e.stopPropagation();
   if (state.currentAudioObj) {
-    state.currentAudioObj.currentTime = 0; // Сбрасываем на начало
+    state.currentAudioObj.currentTime = 0;
     state.currentAudioObj.play().catch(() => {});
   }
 });
