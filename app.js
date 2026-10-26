@@ -49,6 +49,8 @@ const dom = {
   textDisplay: document.getElementById('textDisplay'),
   
   timerBox: document.getElementById('timerBox'),
+  timerBar: document.getElementById('timerBar'),
+  replayBtn: document.getElementById('replayBtn'), 
   timerValue: document.getElementById('timerValue'),
   //timerLabel: document.querySelector('.timer-label'),
   soundHint: document.getElementById('soundHint')
@@ -345,56 +347,60 @@ function startCountdown(name, exerciseType, sign = null) {
   
   state.phase = 'counting';
   let left = state.seconds;
+  const total = state.seconds;
+  
+  // Запоминаем правильное аудио и текст для текущей карточки
+  state.currentAudioName = '';
+  state.currentText = '';
+  
+  if (exerciseType === 'answers') {
+    state.currentAudioName = `${name} - Is_it`;
+    state.currentText = QUESTION[name] || '';
+  } else if (exerciseType === 'sentences') {
+    if (sign === 'plus_long') { state.currentAudioName = `${name} - It_is`; state.currentText = AFFIRMATIVE_LONG[name] || ''; }
+    else if (sign === 'plus_short') { state.currentAudioName = `${name} - Its`; state.currentText = AFFIRMATIVE_SHORT[name] || ''; }
+    else if (sign === 'minus') { state.currentAudioName = `${name} - It_isnt`; state.currentText = NEGATIVE[name] || ''; }
+    else { state.currentAudioName = `${name} - Is_it`; state.currentText = QUESTION[name] || ''; }
+  } else {
+    state.currentAudioName = name;
+    state.currentText = name;
+  }
 
+  // Настраиваем столбик
   showTimer(true);
-  setTimerText(String(left), false);
+  dom.timerBar.style.height = '100%';
+  dom.timerBar.classList.remove('danger');
+  dom.replayBtn.classList.add('hidden'); // Скрываем микрофон во время отсчета
+  dom.textDisplay.classList.add('hidden'); // Скрываем текст до конца таймера
 
   state.countdownTimer = setInterval(() => {
     left--;
+    
     if (left > 0) {
-      setTimerText(String(left), left <= 3);
+      // Обновляем высоту столбика
+      const percent = (left / total) * 100;
+      dom.timerBar.style.height = `${percent}%`;
+      
+      // Если осталось 2 секунды — делаем красным
+      if (left <= 2) {
+        dom.timerBar.classList.add('danger');
+      }
     } else {
-      setTimerText('00', true);
+      // Время вышло!
+      dom.timerBar.style.height = '0%';
       clearInterval(state.countdownTimer);
       state.countdownTimer = null;
       
-      let audioName = '';
-      let textToShow = '';
-      
-      if (exerciseType === 'answers') {
-        // 3-е упражнение (Ответы): пока играем вопрос
-        audioName = `${name} - Is_it`;
-        textToShow = QUESTION[name] || '';
-      } else if (exerciseType === 'sentences') {
-        // 2-е упражнение (Предложения): смотрим на знак
-        if (sign === 'plus_long') {
-          audioName = `${name} - It_is`;
-          textToShow = AFFIRMATIVE_LONG[name] || '';
-        } else if (sign === 'plus_short') {
-          audioName = `${name} - Its`;
-          textToShow = AFFIRMATIVE_SHORT[name] || '';
-        } else if (sign === 'minus') {
-          audioName = `${name} - It_isnt`;
-          textToShow = NEGATIVE[name] || '';
-        } else {
-          audioName = `${name} - Is_it`;
-          textToShow = QUESTION[name] || '';
-        }
-      } else {
-        // 1-е упражнение (Слова)
-        audioName = name;
-        textToShow = name;
-      }
-
-      // Показываем текст на экране (если включена галочка)
+      // Показываем текст (если включено)
       if (state.showText) {
-        dom.textDisplay.textContent = textToShow;
+        dom.textDisplay.textContent = state.currentText;
         dom.textDisplay.classList.remove('hidden');
       }
 
-      // Запускаем аудио
-      playAudio(audioName, () => { 
+      // Включаем аудио
+      playAudio(state.currentAudioName, () => { 
         state.phase = 'ready'; 
+        dom.replayBtn.classList.remove('hidden'); // Показываем микрофон
       });
     }
   }, 1000);
@@ -448,8 +454,11 @@ function playAudio(audioName, onFinish) {
     const src = `${AUDIO_DIR}/${audioName}.${AUDIO_EXTS[i]}`;
     const audio = new Audio();
     
+    // Сохраняем данные для кнопки повтора
+    state.currentAudioObj = audio;
+
     const timeout = setTimeout(() => {
-      tryExt(i + 1); // Пропускаем, если файл не загрузился
+      tryExt(i + 1); 
     }, 1000);
 
     audio.oncanplaythrough = () => {
@@ -535,6 +544,17 @@ document.addEventListener('pointerdown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
       e.target.closest('.sidebar') || e.target.id === 'soundHint') return;
   handleAction();
+});
+
+// ============================================================
+//  КНОПКА ПОВТОРА АУДИО
+// ============================================================
+dom.replayBtn.addEventListener('pointerdown', (e) => {
+  e.stopPropagation(); // Чтобы клик по кнопке не запускал следующую карточку
+  if (state.currentAudioObj) {
+    state.currentAudioObj.currentTime = 0; // Сбрасываем на начало
+    state.currentAudioObj.play().catch(() => {});
+  }
 });
 
 // ============================================================
