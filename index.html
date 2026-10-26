@@ -94,8 +94,15 @@
 
     <!-- Сбоку таймер -->
     <aside id="timerBox" class="timer hidden">
-      <div id="timerValue">00</div>
-      <div class="timer-label">сек / sec</div>
+      <!-- Кнопка повтора аудио -->
+      <button id="replayBtn" class="replay-btn" title="Повторить звук / Repeat audio">
+        🔊
+      </button>
+      
+      <!-- Визуальный таймер -->
+      <div class="timer-bar-container">
+        <div id="timerBar" class="timer-bar"></div>
+      </div>
     </aside>
   </main>
 
