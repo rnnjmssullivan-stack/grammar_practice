@@ -71,7 +71,7 @@ html, body {
 }
 
 .bottom-settings {
-  margin-top: auto; /* Прижимаем к низу */
+  margin-top: auto;
   border-bottom: none;
   border-top: 1px solid #ddd;
 }
@@ -133,7 +133,7 @@ html, body {
   position: relative;
   width: 100%;
   height: 100%;
-  padding-top: 60px; /* Отступ под topbar */
+  padding-top: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,7 +166,7 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 }
 
 .image-wrapper {
-  position: relative;
+  position: relative; /* ОБЯЗАТЕЛЬНО для перечеркивания */
   display: inline-block;
   max-width: 80vw;
   max-height: 70vh;
@@ -181,9 +181,25 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   display: block;
 }
 
+/* Перечеркнутая картинка */
+.crossed-image::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 5px), 
+    rgba(220, 53, 69, 0.8) calc(50% - 5px), 
+    rgba(220, 53, 69, 0.8) calc(50% + 5px), 
+    transparent calc(50% + 5px)
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* Значок для упражнения #2 */
 .card-icon {
-  margin-top: 15px; /* Отступ от картинки */
+  margin-top: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,23 +210,11 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 }
 .card-icon.hidden { display: none; }
 
-/* Разные стили для значков */
-.icon-plus-long {
-  font-size: 60px;
-  color: #28a745; /* Зеленый */
-}
-.icon-plus-short {
-  font-size: 45px; /* Поменьше */
-  color: #007bff; /* Синий */
-}
-.icon-minus {
-  font-size: 55px;
-  color: #dc3545; /* Красный */
-}
-.icon-question {
-  font-size: 55px;
-  color: #fd7e14; /* Оранжевый */
-}
+.icon-plus-long { font-size: 60px; color: #28a745; }
+.icon-plus-short { font-size: 45px; color: #007bff; }
+.icon-minus { font-size: 55px; color: #dc3545; }
+.icon-question { font-size: 55px; color: #fd7e14; }
+
 /* Текст подсказки/ответа */
 .text-display {
   margin-top: 30px;
@@ -237,29 +241,25 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 }
 .timer.hidden { display: none; }
 
-/* Визуальный столбик */
 .timer-bar-container {
-  width: 24px; /* Ширина столбика */
-  height: 300px; /* Высота столбика (макс) */
+  width: 24px;
+  height: 300px;
   background: #f0f0f0;
   border-radius: 12px;
   display: flex;
-  align-items: flex-end; /* Заполняем снизу вверх */
+  align-items: flex-end;
   overflow: hidden;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .timer-bar {
   width: 100%;
-  background-color: #28a745; /* Зеленый */
+  background-color: #28a745;
   height: 100%;
   transition: height 1s linear, background-color 0.3s ease;
 }
 
-/* Красный цвет для последних секунд */
-.timer-bar.danger {
-  background-color: #dc3545;
-}
+.timer-bar.danger { background-color: #dc3545; }
 
 /* Кнопка повтора (микрофон) */
 .replay-btn {
@@ -294,23 +294,3 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   z-index: 20;
 }
 .sound-hint.hidden { display: none; }
-
-/* Перечеркнутая картинка для 3-го упражнения */
-.crossed-image {
-  position: relative;
-}
-
-.crossed-image::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  /* Рисуем красную линию по диагонали */
-  background: linear-gradient(
-    to bottom right,
-    transparent calc(50% - 5px), 
-    rgba(220, 53, 69, 0.8) calc(50% - 5px), 
-    rgba(220, 53, 69, 0.8) calc(50% + 5px), 
-    transparent calc(50% + 5px)
-  );
-  pointer-events: none; /* Чтобы клики проходили сквозь линию */
-}
