@@ -18,10 +18,20 @@ const LESSONS = {
 // ============================================================
 //  СПИСОК УПРАЖНЕНИЙ
 // ============================================================
+// ============================================================
+//  СПИСОК УПРАЖНЕНИЙ
+// ============================================================
 const EXERCISES = [
-  { id: "words",     titleRu: "1. Слова",         titleEn: "1. Words" },
-  { id: "sentences", titleRu: "2. Предложения",   titleEn: "2. Sentences" },
-  { id: "answers",   titleRu: "3. Ответы",        titleEn: "3. Answers" }
+  { id: "words",     titleRu: "1. Слова",              titleEn: "1. Words" },
+  
+  // Разделенное второе упражнение
+  { id: "sent_long", titleRu: "2.1 It is (длинная)",   titleEn: "2.1 It is (long)" },
+  { id: "sent_short",titleRu: "2.2 It's (короткая)",   titleEn: "2.2 It's (short)" },
+  { id: "sent_neg",  titleRu: "2.3 It isn't (минус)",  titleEn: "2.3 It isn't (minus)" },
+  { id: "sent_quest",titleRu: "2.4 Is it (вопрос)",    titleEn: "2.4 Is it (question)" },
+  { id: "sent_mix",  titleRu: "2.5 Всё вместе",        titleEn: "2.5 Mixed" },
+  
+  { id: "answers",   titleRu: "3. Ответы",             titleEn: "3. Answers" }
 ];
 
 // ============================================================
