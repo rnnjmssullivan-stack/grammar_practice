@@ -12,7 +12,10 @@ let state = {
   currentIndex: -1,
   phase: 'start',
   countdownTimer: null,
-  audioEl: null
+  audioEl: null,
+  currentAudioObj: null,
+  currentAudioName: '',
+  currentText: ''
 };
 
 // ============================================================
@@ -43,6 +46,8 @@ const dom = {
   startScreen: document.getElementById('startScreen'),
   playScreen: document.getElementById('playScreen'),
   endScreen: document.getElementById('endScreen'),
+  
+  imageWrapper: document.querySelector('.image-wrapper'), // Добавили обертку для перечеркивания
   cardImage: document.getElementById('cardImage'),
   cardIcon: document.getElementById('cardIcon'),
   textDisplay: document.getElementById('textDisplay'),
@@ -214,7 +219,7 @@ function resetToStart() {
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
   
   dom.cardImage.src = '';
-  dom.cardImage.classList.remove('crossed-image');
+  dom.imageWrapper.classList.remove('crossed-image'); // Снимаем перечеркивание с обертки
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
   dom.replayBtn.classList.add('hidden');
@@ -258,7 +263,7 @@ function nextCard() {
   
   dom.cardImage.style.visibility = 'hidden';
   dom.cardImage.src = '';
-  dom.cardImage.classList.remove('crossed-image');
+  dom.imageWrapper.classList.remove('crossed-image'); // Снимаем перечеркивание
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
   dom.replayBtn.classList.add('hidden');
@@ -286,11 +291,9 @@ function nextCard() {
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
       
-      // Перечеркивание для минуса!
+      // Перечеркивание для минуса! Вешаем на обертку
       if (sign === 'minus') {
-        dom.cardImage.classList.add('crossed-image');
-      } else {
-        dom.cardImage.classList.remove('crossed-image');
+        dom.imageWrapper.classList.add('crossed-image');
       }
       
       dom.cardIcon.className = 'card-icon'; 
@@ -317,15 +320,10 @@ function nextCard() {
     loadImage(name, 0, () => {
       dom.cardImage.style.visibility = 'visible';
       
-      // Убрали перечеркивание для 3-го упражнения
-      dom.cardImage.classList.remove('crossed-image'); 
+      // Для ответов перечеркивание не нужно
+      dom.imageWrapper.classList.remove('crossed-image');
       
-      const data = QUESTION[name];
-      if (state.showText && data) {
-        dom.textDisplay.textContent = data;
-        dom.textDisplay.classList.remove('hidden');
-      }
-      
+      // В самом начале упражнения "Ответы" играет вопрос
       playAudio(`${name} - Is_it`, () => {
         startCountdown(name, 'answers');
       });
@@ -347,8 +345,9 @@ function startCountdown(name, exerciseType, sign = null) {
   state.currentText = '';
   
   if (exerciseType === 'answers') {
-    state.currentAudioName = `${name} - Is_it`;
-    state.currentText = QUESTION[name] || '';
+    // ДЛЯ ОТВЕТОВ: играем файл ответа (пока файлов нет, скрипт просто молчит)
+    state.currentAudioName = `${name} - Answer`; // Название файла для ответа
+    state.currentText = NEGATIVE[name] || '';    // Текст ответа: No, it isn't...
   } else if (exerciseType === 'sentences') {
     if (sign === 'plus_long') { state.currentAudioName = `${name} - It_is`; state.currentText = AFFIRMATIVE_LONG[name] || ''; }
     else if (sign === 'plus_short') { state.currentAudioName = `${name} - Its`; state.currentText = AFFIRMATIVE_SHORT[name] || ''; }
@@ -385,6 +384,7 @@ function startCountdown(name, exerciseType, sign = null) {
         dom.textDisplay.classList.remove('hidden');
       }
 
+      // Включаем аудио ответа
       playAudio(state.currentAudioName, () => { 
         state.phase = 'ready'; 
         dom.replayBtn.classList.remove('hidden');
@@ -521,8 +521,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('pointerdown', (e) => {
+  // ИГНОРИРУЕМ клики по меню, настройкам и кнопке открытия меню
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
-      e.target.closest('.sidebar') || e.target.id === 'soundHint' || e.target.closest('.replay-btn')) return;
+      e.target.closest('.sidebar') || e.target.closest('.topbar') || 
+      e.target.id === 'soundHint' || e.target.closest('.replay-btn')) return;
+  
+  // Игнорируем клики по затемнению (чтобы закрыть меню)
+  if (e.target.id === 'sidebarOverlay') return;
+  
   handleAction();
 });
 
