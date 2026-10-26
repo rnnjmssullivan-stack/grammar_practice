@@ -269,3 +269,23 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   z-index: 20;
 }
 .sound-hint.hidden { display: none; }
+
+/* Перечеркнутая картинка для 3-го упражнения */
+.crossed-image {
+  position: relative;
+}
+
+.crossed-image::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* Рисуем красную линию по диагонали */
+  background: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 5px), 
+    rgba(220, 53, 69, 0.8) calc(50% - 5px), 
+    rgba(220, 53, 69, 0.8) calc(50% + 5px), 
+    transparent calc(50% + 5px)
+  );
+  pointer-events: none; /* Чтобы клики проходили сквозь линию */
+}
