@@ -12,7 +12,7 @@ html, body {
 .sidebar {
   position: fixed;
   top: 0; left: 0;
-  width: 300px;
+  width: 320px;
   height: 100%;
   background: #f8f9fa;
   border-right: 1px solid #ddd;
@@ -59,7 +59,7 @@ html, body {
   border: 1px solid #ddd;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   text-align: left;
   transition: all 0.2s;
 }
@@ -169,19 +169,18 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   position: relative; /* ОБЯЗАТЕЛЬНО для перечеркивания */
   display: inline-block;
   max-width: 80vw;
-  max-height: 70vh;
+  max-height: 60vh;
 }
 
 #cardImage {
   max-width: 100%;
-  max-height: 70vh;
+  max-height: 60vh;
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
   display: block;
 }
 
-/* Перечеркнутая картинка */
 /* Перечеркнутая картинка */
 .image-wrapper.crossed-image::after {
   content: '';
@@ -198,7 +197,7 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   z-index: 10;
 }
 
-/* Значок для упражнения #2 */
+/* Значок для упражнения #1 */
 .card-icon {
   margin-top: 15px;
   display: flex;
@@ -218,7 +217,7 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 
 /* Текст подсказки/ответа */
 .text-display {
-  margin-top: 30px;
+  margin-top: 15px;
   font-size: clamp(18px, 3vw, 32px);
   color: #333;
   font-weight: 500;
@@ -227,6 +226,12 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   line-height: 1.4;
 }
 .text-display.hidden { display: none; }
+
+/* Зачеркнутый текст для Confusables */
+.text-display s {
+  color: #dc3545;
+  text-decoration-thickness: 3px;
+}
 
 /* ---------- Таймер сбоку (Столбик) ---------- */
 .timer {
