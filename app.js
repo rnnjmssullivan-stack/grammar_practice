@@ -24,7 +24,7 @@ let state = {
 // ============================================================
 const IMAGES_DIR = "images";
 const ADDITIONAL_DIR = "images/additional_words_01";
-const CONFUSABLES_DIR = "confusables";
+const CONFUSABLES_DIR = "images/confusables";
 
 const AUDIO_DIR = "audio";
 const AUDIO_HINTS_DIR = "audio/hints";
