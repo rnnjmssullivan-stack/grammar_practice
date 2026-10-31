@@ -7,14 +7,15 @@ let state = {
   lesson: 'all',
   seconds: 5,
   showText: false,
-  
+
   queue: [],
   currentIndex: -1,
   phase: 'start',
   countdownTimer: null,
   audioEl: null,
   currentAudioObj: null,
-  currentAudioName: '',
+  currentAudioQueue: [],   // очередь аудио для склейки
+  currentAudioIndex: 0,
   currentText: ''
 };
 
@@ -22,7 +23,14 @@ let state = {
 //  ПУТИ И РАСШИРЕНИЯ
 // ============================================================
 const IMAGES_DIR = "images";
-const AUDIO_DIR  = "audio";
+const ADDITIONAL_DIR = "images/additional_words_01";
+const CONFUSABLES_DIR = "confusables";
+
+const AUDIO_DIR = "audio";
+const AUDIO_HINTS_DIR = "audio/hints";
+const AUDIO_SHORT_DIR = "audio/short_ans";
+const AUDIO_EMPHATIC_DIR = "audio/emphatic";
+
 const IMAGE_EXTS = ["png", "jpg"];
 const AUDIO_EXTS = ["mp3", "m4a"];
 
@@ -38,28 +46,28 @@ const dom = {
   lessonMenu: document.getElementById('lessonMenu'),
   currentExerciseTitle: document.getElementById('currentExerciseTitle'),
   currentLessonTitle: document.getElementById('currentLessonTitle'),
-  
+
   secondsInput: document.getElementById('secondsInput'),
   showTextToggle: document.getElementById('showTextToggle'),
   langSelect: document.getElementById('langSelect'),
-  
+
   startScreen: document.getElementById('startScreen'),
   playScreen: document.getElementById('playScreen'),
   endScreen: document.getElementById('endScreen'),
-  
-  imageWrapper: document.querySelector('.image-wrapper'), // Добавили обертку для перечеркивания
+
+  imageWrapper: document.querySelector('.image-wrapper'),
   cardImage: document.getElementById('cardImage'),
   cardIcon: document.getElementById('cardIcon'),
   textDisplay: document.getElementById('textDisplay'),
-  
+
   timerBox: document.getElementById('timerBox'),
   timerBar: document.getElementById('timerBar'),
-  replayBtn: document.getElementById('replayBtn'), 
+  replayBtn: document.getElementById('replayBtn'),
   soundHint: document.getElementById('soundHint')
 };
 
 // ============================================================
-//  ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА
+//  ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 function initUI() {
   const savedSeconds = localStorage.getItem('grammar.seconds');
@@ -128,14 +136,14 @@ function applyLanguage() {
   if (headers[0]) headers[0].textContent = t.exercises;
   if (headers[1]) headers[1].textContent = t.words;
   if (headers[2]) headers[2].textContent = t.settings;
-  
+
   const settingSpans = document.querySelectorAll('.setting span');
   if (settingSpans[0]) settingSpans[0].textContent = t.seconds;
   if (settingSpans[1]) settingSpans[1].textContent = t.showText;
-  
+
   dom.startScreen.querySelector('.hint').innerHTML = `${t.startHint}<br><span class="en">${t.startHint}</span>`;
   dom.endScreen.querySelector('.hint').innerHTML = `${t.endHint}<br><span class="en">${t.endHint}</span>`;
-  
+
   renderMenus();
   updateCurrentInfo();
 }
@@ -143,13 +151,13 @@ function applyLanguage() {
 function updateCurrentInfo() {
   const ex = EXERCISES.find(e => e.id === state.exercise);
   const exTitle = state.lang === 'ru' ? ex.titleRu : ex.titleEn;
-  
+
   let lessonTitle = UI_TEXT[state.lang].allWords;
   if (state.lesson !== 'all') {
     const unit = LESSONS[state.lesson];
     lessonTitle = state.lang === 'ru' ? unit.titleRu : unit.titleEn;
   }
-  
+
   dom.currentExerciseTitle.textContent = exTitle;
   dom.currentLessonTitle.textContent = lessonTitle;
 }
@@ -217,37 +225,44 @@ function resetToStart() {
   state.phase = 'start';
   if (state.countdownTimer) clearInterval(state.countdownTimer);
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  
+  state.currentAudioQueue = [];
+  state.currentAudioIndex = 0;
+
   dom.cardImage.src = '';
-  dom.imageWrapper.classList.remove('crossed-image'); // Снимаем перечеркивание с обертки
+  dom.imageWrapper.classList.remove('crossed-image');
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
   dom.replayBtn.classList.add('hidden');
-  
+
   showScreen('startScreen');
   showTimer(false);
 }
 
 function startRound() {
-  const words = getActiveWords();
-  
-  if (words.length === 0) {
-    alert("Нет слов для тренировки!");
-    return;
+  // Для Confusables — берём ключи из CONFUSABLES_PAIRS
+  if (state.exercise === 'confusables') {
+    state.queue = shuffle(Object.keys(CONFUSABLES_PAIRS));
+  } else {
+    const words = getActiveWords();
+    if (words.length === 0) {
+      alert("Нет слов для тренировки!");
+      return;
+    }
+    state.queue = shuffle([...new Set(words)]);
   }
 
-  state.queue = shuffle([...new Set(words)]);
   state.currentIndex = -1;
-  
+
+  // Предзагрузка картинок
   state.queue.forEach(name => {
-    IMAGE_EXTS.forEach(ext => {
-      const img = new Image();
-      img.src = `${IMAGES_DIR}/${name}.${ext}`;
-    });
+    const img = new Image();
+    if (state.exercise === 'confusables') {
+      img.src = `${CONFUSABLES_DIR}/a_${name}.jpg`;
+    } else {
+      img.src = `${IMAGES_DIR}/${name}.png`;
+    }
   });
 
-  dom.cardIcon.classList.add('hidden');
-  
   setTimeout(() => nextCard(), 300);
 }
 
@@ -260,72 +275,133 @@ function nextCard() {
 
   const name = state.queue[state.currentIndex];
   showScreen('playScreen');
-  
+
   dom.cardImage.style.visibility = 'hidden';
   dom.cardImage.src = '';
-  dom.imageWrapper.classList.remove('crossed-image'); // Снимаем перечеркивание
+  dom.imageWrapper.classList.remove('crossed-image');
   dom.cardIcon.classList.add('hidden');
   dom.textDisplay.classList.add('hidden');
   dom.replayBtn.classList.add('hidden');
   showTimer(false);
 
+  // ---------- 0. WORDS ----------
   if (state.exercise === 'words') {
-    loadImage(name, 0, () => {
+    loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
       startCountdown(name, 'words');
     });
-    
-  } else if (state.exercise.startsWith('sent_')) {
-    let sign = '';
-    
+  }
+
+  // ---------- 1. SENTENCES ----------
+  else if (state.exercise.startsWith('sent_')) {
+    let sign = 'plus_long';
     if (state.exercise === 'sent_mix') {
       const signs = ['plus_long', 'plus_short', 'minus', 'question'];
       sign = signs[Math.floor(Math.random() * signs.length)];
-    } else {
-      if (state.exercise === 'sent_long') sign = 'plus_long';
-      if (state.exercise === 'sent_short') sign = 'plus_short';
-      if (state.exercise === 'sent_neg') sign = 'minus';
-      if (state.exercise === 'sent_quest') sign = 'question';
-    }
-    
-    loadImage(name, 0, () => {
+    } else if (state.exercise === 'sent_long') sign = 'plus_long';
+    else if (state.exercise === 'sent_short') sign = 'plus_short';
+    else if (state.exercise === 'sent_neg') sign = 'minus';
+    else if (state.exercise === 'sent_quest') sign = 'question';
+
+    loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
-      
-      // Перечеркивание для минуса! Вешаем на обертку
-      if (sign === 'minus') {
-        dom.imageWrapper.classList.add('crossed-image');
-      }
-      
-      dom.cardIcon.className = 'card-icon'; 
-      
-      if (sign === 'plus_long') {
-        dom.cardIcon.textContent = '➕';
-        dom.cardIcon.classList.add('icon-plus-long');
-      } else if (sign === 'plus_short') {
-        dom.cardIcon.textContent = '➕';
-        dom.cardIcon.classList.add('icon-plus-short');
-      } else if (sign === 'minus') {
-        dom.cardIcon.textContent = '➖';
-        dom.cardIcon.classList.add('icon-minus');
-      } else {
-        dom.cardIcon.textContent = '❓';
-        dom.cardIcon.classList.add('icon-question');
-      }
-      
+
+      if (sign === 'minus') dom.imageWrapper.classList.add('crossed-image');
+
+      dom.cardIcon.className = 'card-icon';
+      if (sign === 'plus_long') { dom.cardIcon.textContent = '➕'; dom.cardIcon.classList.add('icon-plus-long'); }
+      else if (sign === 'plus_short') { dom.cardIcon.textContent = '➕'; dom.cardIcon.classList.add('icon-plus-short'); }
+      else if (sign === 'minus') { dom.cardIcon.textContent = '➖'; dom.cardIcon.classList.add('icon-minus'); }
+      else { dom.cardIcon.textContent = '❓'; dom.cardIcon.classList.add('icon-question'); }
       dom.cardIcon.classList.remove('hidden');
+
       startCountdown(name, 'sentences', sign);
     });
-    
-  } else if (state.exercise === 'answers') {
-    loadImage(name, 0, () => {
+  }
+
+  // ---------- 2. CONFUSABLES ----------
+  else if (state.exercise === 'confusables') {
+    const wrongs = CONFUSABLES_PAIRS[name];
+    const wrong = wrongs[Math.floor(Math.random() * wrongs.length)];
+
+    // текст: It isn't a ball.
+    // Для "a" vs "an" — упрощённо: всегда "a", кроме apple/orange/umbrella
+    const article = (w) => (/^[aeiou]/i.test(w) ? 'an' : 'a');
+
+    const wrongText = NEGATIVE[wrong] || `It isn't ${article(wrong)} ${wrong}.`;
+    const rightText = AFFIRMATIVE_SHORT[name] || `It's ${article(name)} ${name}.`;
+
+    dom.textDisplay.innerHTML = `<s>${wrongText}</s>`;
+    dom.textDisplay.classList.remove('hidden');
+
+    // Аудио: сначала wrong - It_isnt, потом name - Its
+    // Используем файлы из основной audio/
+    state.currentAudioQueue = [
+      { dir: AUDIO_DIR, name: `${wrong} - It_isnt` },
+      { dir: AUDIO_DIR, name: `${name} - Its` }
+    ];
+    state.currentAudioIndex = 0;
+    state.currentText = `${wrongText} ${rightText}`;
+
+    loadImage(name, `${CONFUSABLES_DIR}/a_${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
-      
-      // Для ответов перечеркивание не нужно
-      dom.imageWrapper.classList.remove('crossed-image');
-      
-      // В самом начале упражнения "Ответы" играет вопрос
-      playAudio(`${name} - Is_it`, () => {
-        startCountdown(name, 'answers');
+      startCountdown(name, 'confusables');
+    });
+  }
+
+  // ---------- 3.1 ANS YES ----------
+  else if (state.exercise === 'ans_yes') {
+    state.currentAudioQueue = [
+      { dir: AUDIO_SHORT_DIR, name: 'short_ans_yes' },
+      { dir: AUDIO_EMPHATIC_DIR, name: `${name}_ItIS` }
+    ];
+    state.currentAudioIndex = 0;
+    state.currentText = `Yes, it IS. ${AFFIRMATIVE_LONG[name] || ''}`;
+
+    loadImage(name, `${IMAGES_DIR}/${name}`, () => {
+      dom.cardImage.style.visibility = 'visible';
+      // Сначала вопрос (до таймера)
+      playAudioSingle(`${AUDIO_DIR}/${name} - Is_it`, () => {
+        startCountdown(name, 'ans_yes');
+      });
+    });
+  }
+
+  // ---------- 3.2 ANS NO ----------
+  else if (state.exercise === 'ans_no') {
+    state.currentAudioQueue = [
+      { dir: AUDIO_SHORT_DIR, name: 'short_ans_no' },
+      { dir: AUDIO_DIR, name: `${name} - Its` }
+    ];
+    state.currentAudioIndex = 0;
+    state.currentText = `No, it isn't. ${AFFIRMATIVE_SHORT[name] || ''}`;
+
+    loadImage(name, `${IMAGES_DIR}/${name}`, () => {
+      dom.cardImage.style.visibility = 'visible';
+      playAudioSingle(`${AUDIO_DIR}/${name} - Is_it`, () => {
+        startCountdown(name, 'ans_no');
+      });
+    });
+  }
+
+  // ---------- 3.3 ANS CHAIN (без таймера) ----------
+  else if (state.exercise === 'ans_chain') {
+    state.currentAudioQueue = [
+      { dir: AUDIO_DIR, name: `${name} - Negation_chain` }
+    ];
+    state.currentAudioIndex = 0;
+    state.currentText = `It isn't ... It's not ... It is NOT ...`;
+
+    loadImage(name, `${IMAGES_DIR}/${name}`, () => {
+      dom.cardImage.style.visibility = 'visible';
+      showTimer(false); // без таймера
+      if (state.showText) {
+        dom.textDisplay.textContent = state.currentText;
+        dom.textDisplay.classList.remove('hidden');
+      }
+      playAudioQueue(() => {
+        state.phase = 'ready';
+        dom.replayBtn.classList.remove('hidden');
       });
     });
   }
@@ -336,57 +412,52 @@ function nextCard() {
 // ============================================================
 function startCountdown(name, exerciseType, sign = null) {
   if (state.countdownTimer) clearInterval(state.countdownTimer);
-  
+
   state.phase = 'counting';
   let left = state.seconds;
   const total = state.seconds;
-  
-  state.currentAudioName = '';
-  state.currentText = '';
-  
-  if (exerciseType === 'answers') {
-    // ДЛЯ ОТВЕТОВ: играем файл ответа (пока файлов нет, скрипт просто молчит)
-    state.currentAudioName = `${name} - Answer`; // Название файла для ответа
-    state.currentText = NEGATIVE[name] || '';    // Текст ответа: No, it isn't...
-  } else if (exerciseType === 'sentences') {
-    if (sign === 'plus_long') { state.currentAudioName = `${name} - It_is`; state.currentText = AFFIRMATIVE_LONG[name] || ''; }
-    else if (sign === 'plus_short') { state.currentAudioName = `${name} - Its`; state.currentText = AFFIRMATIVE_SHORT[name] || ''; }
-    else if (sign === 'minus') { state.currentAudioName = `${name} - It_isnt`; state.currentText = NEGATIVE[name] || ''; }
-    else { state.currentAudioName = `${name} - Is_it`; state.currentText = QUESTION[name] || ''; }
-  } else {
-    state.currentAudioName = name;
-    state.currentText = name;
+
+  // Для sent_* — добавляем интонационную подсказку
+  let hintFile = null;
+  if (exerciseType === 'sentences') {
+    if (sign === 'plus_long' || sign === 'plus_short') hintFile = 'hint_yes';
+    else if (sign === 'minus') hintFile = 'hint_no';
+    else hintFile = 'hint_questionYN';
   }
 
   showTimer(true);
   dom.timerBar.style.height = '100%';
   dom.timerBar.classList.remove('danger');
   dom.replayBtn.classList.add('hidden');
-  dom.textDisplay.classList.add('hidden');
+  if (exerciseType !== 'confusables') {
+    dom.textDisplay.classList.add('hidden');
+  }
+
+  // Проигрываем интонационную подсказку в начале отсчёта (если есть)
+  if (hintFile) {
+    playAudioSingle(`${AUDIO_HINTS_DIR}/${hintFile}`, null);
+  }
 
   state.countdownTimer = setInterval(() => {
     left--;
-    
+
     if (left > 0) {
       const percent = (left / total) * 100;
       dom.timerBar.style.height = `${percent}%`;
-      
-      if (left <= 2) {
-        dom.timerBar.classList.add('danger');
-      }
+      if (left <= 2) dom.timerBar.classList.add('danger');
     } else {
       dom.timerBar.style.height = '0%';
       clearInterval(state.countdownTimer);
       state.countdownTimer = null;
-      
+
       if (state.showText) {
         dom.textDisplay.textContent = state.currentText;
         dom.textDisplay.classList.remove('hidden');
       }
 
-      // Включаем аудио ответа
-      playAudio(state.currentAudioName, () => { 
-        state.phase = 'ready'; 
+      // Проигрываем очередь аудио
+      playAudioQueue(() => {
+        state.phase = 'ready';
         dom.replayBtn.classList.remove('hidden');
       });
     }
@@ -396,81 +467,107 @@ function startCountdown(name, exerciseType, sign = null) {
 // ============================================================
 //  ЗАГРУЗКА КАРТИНОК
 // ============================================================
-function loadImage(name, extIndex, onSuccess) {
-  if (extIndex >= IMAGE_EXTS.length) {
-    if (onSuccess) onSuccess();
-    return;
-  }
-
-  const ext = IMAGE_EXTS[extIndex];
-  const src = `${IMAGES_DIR}/${name}.${ext}`;
-  const img = new Image();
-  
-  img.onload = () => {
-    dom.cardImage.src = src;
-    dom.cardImage.alt = name;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+// Пробуем расширения png → jpg, и для новых слов — ещё и additional_words_01
+function loadImage(name, basePath, onSuccess) {
+  const tryExt = (extIndex) => {
+    if (extIndex >= IMAGE_EXTS.length) {
+      // для новых слов пробуем additional_words_01
+      if (!basePath.includes('additional')) {
+        loadImage(name, `${ADDITIONAL_DIR}/${name}`, onSuccess);
+      } else {
+        if (onSuccess) onSuccess(); // картинки нет — просто показываем пусто
+      }
+      return;
+    }
+    const ext = IMAGE_EXTS[extIndex];
+    const src = `${basePath}.${ext}`;
+    const img = new Image();
+    img.onload = () => {
+      dom.cardImage.src = src;
+      dom.cardImage.alt = name;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
         if (onSuccess) onSuccess();
-      });
-    });
+      }));
+    };
+    img.onerror = () => tryExt(extIndex + 1);
+    img.src = src;
   };
-
-  img.onerror = () => loadImage(name, extIndex + 1, onSuccess);
-  img.src = src;
+  tryExt(0);
 }
 
 // ============================================================
 //  АУДИО
 // ============================================================
-function playAudio(audioName, onFinish) {
-  state.phase = 'audio';
-  
-  if (state.audioEl) {
-    state.audioEl.pause();
-    state.audioEl = null;
-  }
-
+// Одиночный аудиофайл (для вопроса, подсказки)
+function playAudioSingle(path, onFinish) {
   const tryExt = (i) => {
     if (i >= AUDIO_EXTS.length) {
+      if (onFinish) onFinish();
+      return;
+    }
+    const src = `${path}.${AUDIO_EXTS[i]}`;
+    const audio = new Audio();
+    audio.oncanplaythrough = () => {
+      state.audioEl = audio;
+      audio.play().then(() => {
+        audio.onended = () => { if (onFinish) onFinish(); };
+      }).catch(() => {
+        showSoundHint();
+        if (onFinish) onFinish();
+      });
+    };
+    audio.onerror = () => tryExt(i + 1);
+    audio.src = src;
+  };
+  tryExt(0);
+}
+
+// Очередь аудио (для склейки)
+function playAudioQueue(onFinish) {
+  state.phase = 'audio';
+  if (state.currentAudioQueue.length === 0) {
+    state.phase = 'ready';
+    if (onFinish) onFinish();
+    return;
+  }
+
+  const playNext = () => {
+    if (state.currentAudioIndex >= state.currentAudioQueue.length) {
       state.phase = 'ready';
       if (onFinish) onFinish();
       return;
     }
-
-    const src = `${AUDIO_DIR}/${audioName}.${AUDIO_EXTS[i]}`;
-    const audio = new Audio();
-    
-    state.currentAudioObj = audio;
-
-    const timeout = setTimeout(() => {
-      tryExt(i + 1); 
-    }, 1000);
-
-    audio.oncanplaythrough = () => {
-      clearTimeout(timeout);
-      state.audioEl = audio;
-      audio.play().then(() => {
-        audio.onended = () => {
-          state.phase = 'ready';
-          if (onFinish) onFinish();
-        };
-      }).catch(() => {
-        showSoundHint();
-        state.phase = 'ready';
-        if (onFinish) onFinish();
-      });
+    const item = state.currentAudioQueue[state.currentAudioIndex];
+    const tryExt = (i) => {
+      if (i >= AUDIO_EXTS.length) {
+        // файла нет — пропускаем
+        state.currentAudioIndex++;
+        playNext();
+        return;
+      }
+      const src = `${item.dir}/${item.name}.${AUDIO_EXTS[i]}`;
+      const audio = new Audio();
+      audio.oncanplaythrough = () => {
+        state.currentAudioObj = audio;
+        state.audioEl = audio;
+        audio.play().then(() => {
+          audio.onended = () => {
+            state.currentAudioIndex++;
+            playNext();
+          };
+        }).catch(() => {
+          showSoundHint();
+          state.currentAudioIndex++;
+          playNext();
+        });
+      };
+      audio.onerror = () => tryExt(i + 1);
+      audio.src = src;
     };
-
-    audio.onerror = () => {
-      clearTimeout(timeout);
-      tryExt(i + 1);
-    };
-
-    audio.src = src;
+    tryExt(0);
   };
 
-  tryExt(0);
+  playNext();
 }
 
 // ============================================================
@@ -521,19 +618,15 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('pointerdown', (e) => {
-  // ИГНОРИРУЕМ клики по меню, настройкам и кнопке открытия меню
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
-      e.target.closest('.sidebar') || e.target.closest('.topbar') || 
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' ||
+      e.target.closest('.sidebar') || e.target.closest('.topbar') ||
       e.target.id === 'soundHint' || e.target.closest('.replay-btn')) return;
-  
-  // Игнорируем клики по затемнению (чтобы закрыть меню)
   if (e.target.id === 'sidebarOverlay') return;
-  
   handleAction();
 });
 
 // ============================================================
-//  КНОПКА ПОВТОРА АУДИО
+//  КНОПКА ПОВТОРА
 // ============================================================
 dom.replayBtn.addEventListener('pointerdown', (e) => {
   e.stopPropagation();
