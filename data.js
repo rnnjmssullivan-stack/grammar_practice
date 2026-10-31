@@ -12,6 +12,16 @@ const LESSONS = {
       "very_big", "big", "small", "very_small",
       "pink", "green", "brown", "orange", "purple", "yellow", "black", "white", "blue", "gray", "red"
     ]
+  },
+  additional: {
+    titleRu: "Доп. слова",
+    titleEn: "Additional",
+    words: [
+      "apple", "orange", "umbrella", "bag", "ball", "boat", "bus", "car", 
+      "cat", "computer", "dog", "doll", "fan", "fish", "game", "girl", 
+      "hat", "jug", "lemon", "man", "mat", "pen", "pony", "taxi", 
+      "teddy", "train", "van", "zebra"
+    ]
   }
 };
 
@@ -19,22 +29,42 @@ const LESSONS = {
 //  СПИСОК УПРАЖНЕНИЙ
 // ============================================================
 const EXERCISES = [
-  { id: "words",     titleRu: "1. Слова",              titleEn: "1. Words" },
-  
-  // Разделенное второе упражнение
-  { id: "sent_long", titleRu: "2.1 It is (длинная)",   titleEn: "2.1 It is (long)" },
-  { id: "sent_short",titleRu: "2.2 It's (короткая)",   titleEn: "2.2 It's (short)" },
-  { id: "sent_neg",  titleRu: "2.3 It isn't (минус)",  titleEn: "2.3 It isn't (minus)" },
-  { id: "sent_quest",titleRu: "2.4 Is it (вопрос)",    titleEn: "2.4 Is it (question)" },
-  { id: "sent_mix",  titleRu: "2.5 Всё вместе",        titleEn: "2.5 Mixed" },
-  
-  { id: "answers",   titleRu: "3. Ответы",             titleEn: "3. Answers" }
+  { id: "words",      titleRu: "0. Слова",               titleEn: "0. Words" },
+  { id: "sent_long",  titleRu: "1.1 It is (длинная)",    titleEn: "1.1 It is (long)" },
+  { id: "sent_short", titleRu: "1.2 It's (короткая)",    titleEn: "1.2 It's (short)" },
+  { id: "sent_neg",   titleRu: "1.3 It isn't (минус)",   titleEn: "1.3 It isn't (minus)" },
+  { id: "sent_quest", titleRu: "1.4 Is it (вопрос)",     titleEn: "1.4 Is it (question)" },
+  { id: "sent_mix",   titleRu: "1.5 Всё вместе",         titleEn: "1.5 Mixed" },
+  { id: "confusables",titleRu: "2. Confusables",         titleEn: "2. Confusables" },
+  { id: "ans_yes",    titleRu: "3.1 Ответ: Да",          titleEn: "3.1 Answer: Yes" },
+  { id: "ans_no",     titleRu: "3.2 Ответ: Нет",         titleEn: "3.2 Answer: No" },
+  { id: "ans_chain",  titleRu: "3.3 Нарастающие",        titleEn: "3.3 Negations" }
 ];
 
 // ============================================================
-//  ТЕКСТЫ И ПРАВИЛЬНЫЕ ОТВЕТЫ
+//  ПАРЫ ДЛЯ CONFUSABLES
 // ============================================================
+const CONFUSABLES_PAIRS = {
+  "bag": ["ball", "hat_1"],
+  "boy": ["girl"],
+  "girl": ["boy"],
+  "train": ["van"],
+  "van": ["train"],
+  "car": ["boat"],
+  "boat": ["car"],
+  "cat": ["dog"],
+  "dog": ["cat"],
+  "doll": ["teddy"],
+  "teddy": ["doll"],
+  "hat_1": ["ball"],
+  "hat_2": ["fan"],
+  "fish": ["horse", "mat"],
+  "mat": ["fish"]
+};
 
+// ============================================================
+//  ТЕКСТЫ (БАЗА)
+// ============================================================
 const AFFIRMATIVE_SHORT = {
   "ball": "It's a ball.", "boat": "It's a boat.", "boy": "It's a boy.", "car": "It's a car.", "cat": "It's a cat.",
   "computer": "It's a computer.", "dog": "It's a dog.", "doll": "It's a doll.", "fan": "It's a fan.", "fish": "It's a fish.",
@@ -42,7 +72,8 @@ const AFFIRMATIVE_SHORT = {
   "teddy": "It's a teddy.", "train": "It's a train.", "van": "It's a van.",
   "very_big": "It's very big.", "big": "It's big.", "small": "It's small.", "very_small": "It's very small.",
   "pink": "It's pink.", "green": "It's green.", "brown": "It's brown.", "orange": "It's orange.", "purple": "It's purple.",
-  "yellow": "It's yellow.", "black": "It's black.", "white": "It's white.", "blue": "It's blue.", "gray": "It's gray.", "red": "It's red."
+  "yellow": "It's yellow.", "black": "It's black.", "white": "It's white.", "blue": "It's blue.", "gray": "It's gray.", "red": "It's red.",
+  "bag": "It's a bag.", "apple": "It's an apple.", "bus": "It's a bus.", "horse": "It's a horse."
 };
 
 const AFFIRMATIVE_LONG = {
@@ -52,7 +83,8 @@ const AFFIRMATIVE_LONG = {
   "teddy": "It is a teddy.", "train": "It is a train.", "van": "It is a van.",
   "very_big": "It is very big.", "big": "It is big.", "small": "It is small.", "very_small": "It is very small.",
   "pink": "It is pink.", "green": "It is green.", "brown": "It is brown.", "orange": "It is orange.", "purple": "It is purple.",
-  "yellow": "It is yellow.", "black": "It is black.", "white": "It is white.", "blue": "It is blue.", "gray": "It is gray.", "red": "It is red."
+  "yellow": "It is yellow.", "black": "It is black.", "white": "It is white.", "blue": "It is blue.", "gray": "It is gray.", "red": "It is red.",
+  "bag": "It is a bag."
 };
 
 const NEGATIVE = {
@@ -62,7 +94,8 @@ const NEGATIVE = {
   "teddy": "It isn't a teddy.", "train": "It isn't a train.", "van": "It isn't a van.",
   "very_big": "It isn't very big.", "big": "It isn't big.", "small": "It isn't small.", "very_small": "It isn't very small.",
   "pink": "It isn't pink.", "green": "It isn't green.", "brown": "It isn't brown.", "orange": "It isn't orange.", "purple": "It isn't purple.",
-  "yellow": "It isn't yellow.", "black": "It isn't black.", "white": "It isn't white.", "blue": "It isn't blue.", "gray": "It isn't gray.", "red": "It isn't red."
+  "yellow": "It isn't yellow.", "black": "It isn't black.", "white": "It isn't white.", "blue": "It isn't blue.", "gray": "It isn't gray.", "red": "It isn't red.",
+  "bag": "It isn't a bag.", "apple": "It isn't an apple.", "bus": "It isn't a bus.", "horse": "It isn't a horse."
 };
 
 const QUESTION = {
@@ -72,7 +105,8 @@ const QUESTION = {
   "teddy": "Is it a teddy?", "train": "Is it a train?", "van": "Is it a van?",
   "very_big": "Is it very big?", "big": "Is it big?", "small": "Is it small?", "very_small": "Is it very small?",
   "pink": "Is it pink?", "green": "Is it green?", "brown": "Is it brown?", "orange": "Is it orange?", "purple": "Is it purple?",
-  "yellow": "Is it yellow?", "black": "Is it black?", "white": "Is it white?", "blue": "Is it blue?", "gray": "Is it gray?", "red": "Is it red?"
+  "yellow": "Is it yellow?", "black": "Is it black?", "white": "Is it white?", "blue": "Is it blue?", "gray": "Is it gray?", "red": "Is it red.",
+  "bag": "Is it a bag?", "apple": "Is it an apple?", "bus": "Is it a bus?", "horse": "Is it a horse?"
 };
 
 // ============================================================
@@ -88,8 +122,7 @@ const UI_TEXT = {
     showText: "Показывать текст",
     allWords: "Все слова",
     startHint: "Нажми <b>Пробел</b> или коснись экрана, чтобы начать",
-    endHint: "Начать новый раунд? Нажми на экран",
-    timerLabel: "сек"
+    endHint: "Начать новый раунд? Нажми на экран"
   },
   en: {
     menu: "Menu",
@@ -100,7 +133,6 @@ const UI_TEXT = {
     showText: "Show text",
     allWords: "All words",
     startHint: "Press <b>Space</b> or tap the screen to start",
-    endHint: "Start a new round? Tap the screen",
-    timerLabel: "sec"
+    endHint: "Start a new round? Tap the screen"
   }
 };
