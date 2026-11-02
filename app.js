@@ -9,7 +9,8 @@ let state = {
   showText: false,
   showHints: true,
 
-  queue: [],
+  queue: [],             // проверенные слова, готовые к показу
+  pending: [],           // ещё не проверенные
   currentIndex: -1,
   phase: 'start',
   countdownTimer: null,
@@ -18,7 +19,7 @@ let state = {
   currentAudioIndex: 0,
   currentText: '',
   filtering: false,
-  preloadedImages: {}
+  backgroundCheckActive: false
 };
 
 // ============================================================
@@ -223,7 +224,7 @@ function checkImage(basePath) {
     const tryNext = () => {
       if (i >= IMAGE_EXTS.length) { resolve(false); return; }
       const img = new Image();
-      img.onload = () => { state.preloadedImages[`${basePath}.${IMAGE_EXTS[i]}`] = img; resolve(true); };
+      img.onload = () => resolve(true);
       img.onerror = () => { i++; tryNext(); };
       img.src = `${basePath}.${IMAGE_EXTS[i]}`;
     };
@@ -339,10 +340,13 @@ function shuffle(arr) {
 function resetToStart() {
   state.phase = 'start';
   state.filtering = false;
+  state.backgroundCheckActive = false;
   if (state.countdownTimer) clearInterval(state.countdownTimer);
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
   state.currentAudioQueue = [];
   state.currentAudioIndex = 0;
+  state.queue = [];
+  state.pending = [];
 
   dom.cardImage.src = '';
   dom.imageWrapper.classList.remove('crossed-image');
@@ -352,6 +356,22 @@ function resetToStart() {
 
   showScreen('startScreen');
   showTimer(false);
+}
+
+// Фоновая проверка: берём из pending и добавляем в queue
+async function backgroundCheck() {
+  if (state.backgroundCheckActive) return;
+  state.backgroundCheckActive = true;
+
+  while (state.pending.length > 0) {
+    const name = state.pending.shift();
+    const ok = await isWordAvailable(name, state.exercise);
+    if (ok) {
+      state.queue.push(name);
+    }
+  }
+
+  state.backgroundCheckActive = false;
 }
 
 async function startRound() {
@@ -367,30 +387,57 @@ async function startRound() {
   } else {
     candidates = [...new Set(getActiveWords())];
   }
+  candidates = shuffle(candidates);
 
-  // Параллельная проверка всех кандидатов
-  const checks = candidates.map(name => 
-    isWordAvailable(name, state.exercise).then(ok => ({ name, ok }))
-  );
-  const results = await Promise.all(checks);
-  const available = results.filter(r => r.ok).map(r => r.name);
+  // Ищем первое доступное слово (проверяем по одному, пропуская недоступные)
+  let firstAvailable = null;
+  let firstIndex = -1;
+  for (let i = 0; i < candidates.length; i++) {
+    const ok = await isWordAvailable(candidates[i], state.exercise);
+    if (ok) {
+      firstAvailable = candidates[i];
+      firstIndex = i;
+      break;
+    }
+  }
 
   state.filtering = false;
 
-  if (available.length === 0) {
+  // Если не нашли ни одного — ошибка
+  if (!firstAvailable) {
     alert("Нет слов с полным набором файлов для этого упражнения!");
     resetToStart();
     return;
   }
 
-  state.queue = shuffle(available);
+  // Первое слово — в очередь. Остальные — в pending.
+  state.queue = [firstAvailable];
+  state.pending = candidates.slice(firstIndex + 1);
+
   state.currentIndex = -1;
-  setTimeout(() => nextCard(), 300);
+  nextCard(); // показываем первое
+
+  // Запускаем фоновую проверку остальных (не ждём)
+  backgroundCheck();
 }
 
 function nextCard() {
   state.currentIndex++;
   if (state.currentIndex >= state.queue.length) {
+    // Очередь опустела — но фоновая проверка может ещё идти
+    if (state.pending.length > 0 || state.backgroundCheckActive) {
+      // Подождать, пока фоновая проверка добавит что-то
+      const waitFor = setInterval(() => {
+        if (state.currentIndex < state.queue.length) {
+          clearInterval(waitFor);
+          nextCard();
+        } else if (!state.backgroundCheckActive && state.pending.length === 0) {
+          clearInterval(waitFor);
+          endRound();
+        }
+      }, 100);
+      return;
+    }
     endRound();
     return;
   }
@@ -464,7 +511,6 @@ function nextCard() {
     const rightText = AFFIRMATIVE_SHORT[name] || `It's ${name}.`;
     const fullText = `It isn't ${wrongWordText}. ${rightText}`;
 
-    // Показываем только зачеркнутое слово
     dom.textDisplay.innerHTML = `<s>${wrongWordText}</s>`;
     dom.textDisplay.classList.remove('hidden');
 
