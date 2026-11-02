@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Отчёт / Report</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .report-container {
+      max-width: 900px;
+      margin: 80px auto 40px;
+      padding: 20px;
+      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .report-container h1 {
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    .report-container h2 {
+      font-size: 20px;
+      margin: 30px 0 10px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #eee;
+    }
+    .report-container table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .report-container th, .report-container td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+      vertical-align: top;
+    }
+    .report-container th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    .report-container .ok { color: #28a745; }
+    .report-container .miss { color: #dc3545; font-weight: 500; }
+    .report-container .back {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #007bff;
+      text-decoration: none;
+    }
+    .report-container .back:hover { text-decoration: underline; }
+    .report-container .status {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .report-container .loading {
+      color: #999;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <a href="index.html" class="back">← Назад к упражнениям / Back to exercises</a>
+    <h1>Отчёт о файлах / File Report</h1>
+    <div id="status" class="status">Проверяем файлы... / Checking files...</div>
+    <div id="report"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="report.js"></script>
+</body>
+</html>

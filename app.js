@@ -424,12 +424,16 @@ async function startRound() {
 function nextCard() {
   state.currentIndex++;
   if (state.currentIndex >= state.queue.length) {
-    // Очередь опустела — но фоновая проверка может ещё идти
     if (state.pending.length > 0 || state.backgroundCheckActive) {
-      // Подождать, пока фоновая проверка добавит что-то
+      dom.cardImage.style.visibility = 'hidden';
+      dom.textDisplay.classList.add('hidden');
+      dom.cardIcon.classList.add('hidden');
+      showTimer(false);
+      // Ждём, пока фоновая проверка добавит слово
       const waitFor = setInterval(() => {
         if (state.currentIndex < state.queue.length) {
           clearInterval(waitFor);
+          state.currentIndex--; // откатываем, т.к. nextCard увеличит
           nextCard();
         } else if (!state.backgroundCheckActive && state.pending.length === 0) {
           clearInterval(waitFor);
