@@ -14,13 +14,14 @@ let state = {
   countdownTimer: null,
   audioEl: null,
   currentAudioObj: null,
-  currentAudioQueue: [],   // очередь аудио для склейки
+  currentAudioQueue: [],
   currentAudioIndex: 0,
-  currentText: ''
+  currentText: '',
+  filtering: false
 };
 
 // ============================================================
-//  ПУТИ И РАСШИРЕНИЯ
+//  ПУТИ
 // ============================================================
 const IMAGES_DIR = "images";
 const ADDITIONAL_DIR = "images/additional_words_01";
@@ -46,20 +47,16 @@ const dom = {
   lessonMenu: document.getElementById('lessonMenu'),
   currentExerciseTitle: document.getElementById('currentExerciseTitle'),
   currentLessonTitle: document.getElementById('currentLessonTitle'),
-
   secondsInput: document.getElementById('secondsInput'),
   showTextToggle: document.getElementById('showTextToggle'),
   langSelect: document.getElementById('langSelect'),
-
   startScreen: document.getElementById('startScreen'),
   playScreen: document.getElementById('playScreen'),
   endScreen: document.getElementById('endScreen'),
-
   imageWrapper: document.querySelector('.image-wrapper'),
   cardImage: document.getElementById('cardImage'),
   cardIcon: document.getElementById('cardIcon'),
   textDisplay: document.getElementById('textDisplay'),
-
   timerBox: document.getElementById('timerBox'),
   timerBar: document.getElementById('timerBar'),
   replayBtn: document.getElementById('replayBtn'),
@@ -151,13 +148,11 @@ function applyLanguage() {
 function updateCurrentInfo() {
   const ex = EXERCISES.find(e => e.id === state.exercise);
   const exTitle = state.lang === 'ru' ? ex.titleRu : ex.titleEn;
-
   let lessonTitle = UI_TEXT[state.lang].allWords;
   if (state.lesson !== 'all') {
     const unit = LESSONS[state.lesson];
     lessonTitle = state.lang === 'ru' ? unit.titleRu : unit.titleEn;
   }
-
   dom.currentExerciseTitle.textContent = exTitle;
   dom.currentLessonTitle.textContent = lessonTitle;
 }
@@ -200,6 +195,97 @@ dom.closeBtn.onclick = closeSidebar;
 dom.overlay.onclick = closeSidebar;
 
 // ============================================================
+//  ПРОВЕРКА НАЛИЧИЯ ФАЙЛОВ
+// ============================================================
+function checkImage(basePath) {
+  return new Promise(resolve => {
+    let i = 0;
+    const tryNext = () => {
+      if (i >= IMAGE_EXTS.length) { resolve(false); return; }
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => { i++; tryNext(); };
+      img.src = `${basePath}.${IMAGE_EXTS[i]}`;
+    };
+    tryNext();
+  });
+}
+
+function checkAudio(basePath) {
+  return new Promise(resolve => {
+    let i = 0;
+    const tryNext = () => {
+      if (i >= AUDIO_EXTS.length) { resolve(false); return; }
+      const audio = new Audio();
+      const t = setTimeout(() => { audio.src = ''; i++; tryNext(); }, 1500);
+      audio.oncanplaythrough = () => { clearTimeout(t); resolve(true); };
+      audio.onerror = () => { clearTimeout(t); i++; tryNext(); };
+      audio.src = `${basePath}.${AUDIO_EXTS[i]}`;
+      audio.load();
+    };
+    tryNext();
+  });
+}
+
+// Для confusables: имя wrong-слова для аудио (hat_1 → hat)
+function audioBaseForConfusable(w) {
+  return w.replace(/_\d+$/, '');
+}
+
+async function isWordAvailable(name, exercise) {
+  let imgOk = false;
+  if (exercise === 'confusables') {
+    imgOk = await checkImage(`${CONFUSABLES_DIR}/${name}`);
+  } else {
+    imgOk = await checkImage(`${IMAGES_DIR}/${name}`);
+    if (!imgOk) imgOk = await checkImage(`${ADDITIONAL_DIR}/${name}`);
+  }
+  if (!imgOk) return false;
+
+  if (exercise === 'words') {
+    return await checkAudio(`${AUDIO_DIR}/${name}`);
+  }
+  if (exercise === 'sent_long')  return await checkAudio(`${AUDIO_DIR}/${name} - It_is`);
+  if (exercise === 'sent_short') return await checkAudio(`${AUDIO_DIR}/${name} - Its`);
+  if (exercise === 'sent_neg')   return await checkAudio(`${AUDIO_DIR}/${name} - It_isnt`);
+  if (exercise === 'sent_quest') return await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
+  if (exercise === 'sent_mix') {
+    const a = await checkAudio(`${AUDIO_DIR}/${name} - It_is`);
+    const b = await checkAudio(`${AUDIO_DIR}/${name} - Its`);
+    const c = await checkAudio(`${AUDIO_DIR}/${name} - It_isnt`);
+    const d = await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
+    return a && b && c && d;
+  }
+  if (exercise === 'confusables') {
+    const wrongs = CONFUSABLES_PAIRS[name] || [];
+    if (wrongs.length === 0) return false;
+    const rightOk = await checkAudio(`${AUDIO_DIR}/${name} - Its`);
+    if (!rightOk) return false;
+    for (const w of wrongs) {
+      const ok = await checkAudio(`${AUDIO_DIR}/${audioBaseForConfusable(w)} - It_isnt`);
+      if (ok) return true;
+    }
+    return false;
+  }
+  if (exercise === 'ans_yes') {
+    const q = await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
+    const s = await checkAudio(`${AUDIO_SHORT_DIR}/short_ans_yes`);
+    const e = await checkAudio(`${AUDIO_EMPHATIC_DIR}/${name}_ItIS`);
+    return q && s && e;
+  }
+  if (exercise === 'ans_no') {
+    const q = await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
+    const s = await checkAudio(`${AUDIO_SHORT_DIR}/short_ans_no`);
+    const a = await checkAudio(`${AUDIO_DIR}/${name} - Its`);
+    return q && s && a;
+  }
+  if (exercise === 'ans_chain') {
+    return await checkAudio(`${AUDIO_DIR}/${name} - Negation_chain`);
+  }
+  return false;
+}
+
+// ============================================================
 //  ЛОГИКА РАУНДА
 // ============================================================
 function getActiveWords() {
@@ -207,9 +293,8 @@ function getActiveWords() {
     let all = [];
     Object.values(LESSONS).forEach(u => all.push(...u.words));
     return all;
-  } else {
-    return LESSONS[state.lesson].words;
   }
+  return LESSONS[state.lesson].words;
 }
 
 function shuffle(arr) {
@@ -223,6 +308,7 @@ function shuffle(arr) {
 
 function resetToStart() {
   state.phase = 'start';
+  state.filtering = false;
   if (state.countdownTimer) clearInterval(state.countdownTimer);
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
   state.currentAudioQueue = [];
@@ -238,31 +324,36 @@ function resetToStart() {
   showTimer(false);
 }
 
-function startRound() {
-  // Для Confusables — берём ключи из CONFUSABLES_PAIRS
+async function startRound() {
+  if (state.filtering) return;
+  state.filtering = true;
+
+  dom.startScreen.querySelector('.hint').innerHTML =
+    'Загрузка... / Loading...<br><span class="en">Проверяем файлы / Checking files</span>';
+
+  let candidates;
   if (state.exercise === 'confusables') {
-    state.queue = shuffle(Object.keys(CONFUSABLES_PAIRS));
+    candidates = Object.keys(CONFUSABLES_PAIRS);
   } else {
-    const words = getActiveWords();
-    if (words.length === 0) {
-      alert("Нет слов для тренировки!");
-      return;
-    }
-    state.queue = shuffle([...new Set(words)]);
+    candidates = [...new Set(getActiveWords())];
   }
 
+  const available = [];
+  for (const name of candidates) {
+    const ok = await isWordAvailable(name, state.exercise);
+    if (ok) available.push(name);
+  }
+
+  state.filtering = false;
+
+  if (available.length === 0) {
+    alert("Нет слов с полным набором файлов для этого упражнения!");
+    resetToStart();
+    return;
+  }
+
+  state.queue = shuffle(available);
   state.currentIndex = -1;
-
-  // Предзагрузка картинок
-  state.queue.forEach(name => {
-    const img = new Image();
-    if (state.exercise === 'confusables') {
-      img.src = `${CONFUSABLES_DIR}/a_${name}.jpg`;
-    } else {
-      img.src = `${IMAGES_DIR}/${name}.png`;
-    }
-  });
-
   setTimeout(() => nextCard(), 300);
 }
 
@@ -305,7 +396,6 @@ function nextCard() {
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
-
       if (sign === 'minus') dom.imageWrapper.classList.add('crossed-image');
 
       dom.cardIcon.className = 'card-icon';
@@ -321,29 +411,23 @@ function nextCard() {
 
   // ---------- 2. CONFUSABLES ----------
   else if (state.exercise === 'confusables') {
-    const wrongs = CONFUSABLES_PAIRS[name];
+    const wrongs = CONFUSABLES_PAIRS[name] || [];
     const wrong = wrongs[Math.floor(Math.random() * wrongs.length)];
 
-    // текст: It isn't a ball.
-    // Для "a" vs "an" — упрощённо: всегда "a", кроме apple/orange/umbrella
-    const article = (w) => (/^[aeiou]/i.test(w) ? 'an' : 'a');
-
-    const wrongText = NEGATIVE[wrong] || `It isn't ${article(wrong)} ${wrong}.`;
-    const rightText = AFFIRMATIVE_SHORT[name] || `It's ${article(name)} ${name}.`;
+    const wrongText = NEGATIVE[wrong] || `It isn't ${wrong}.`;
+    const rightText = AFFIRMATIVE_SHORT[name] || `It's ${name}.`;
 
     dom.textDisplay.innerHTML = `<s>${wrongText}</s>`;
     dom.textDisplay.classList.remove('hidden');
 
-    // Аудио: сначала wrong - It_isnt, потом name - Its
-    // Используем файлы из основной audio/
     state.currentAudioQueue = [
-      { dir: AUDIO_DIR, name: `${wrong} - It_isnt` },
+      { dir: AUDIO_DIR, name: `${audioBaseForConfusable(wrong)} - It_isnt` },
       { dir: AUDIO_DIR, name: `${name} - Its` }
     ];
     state.currentAudioIndex = 0;
     state.currentText = `${wrongText} ${rightText}`;
 
-    loadImage(name, `${CONFUSABLES_DIR}/a_${name}`, () => {
+    loadImage(name, `${CONFUSABLES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
       startCountdown(name, 'confusables');
     });
@@ -360,7 +444,6 @@ function nextCard() {
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
-      // Сначала вопрос (до таймера)
       playAudioSingle(`${AUDIO_DIR}/${name} - Is_it`, () => {
         startCountdown(name, 'ans_yes');
       });
@@ -384,7 +467,7 @@ function nextCard() {
     });
   }
 
-  // ---------- 3.3 ANS CHAIN (без таймера) ----------
+  // ---------- 3.3 ANS CHAIN ----------
   else if (state.exercise === 'ans_chain') {
     state.currentAudioQueue = [
       { dir: AUDIO_DIR, name: `${name} - Negation_chain` }
@@ -394,7 +477,7 @@ function nextCard() {
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
-      showTimer(false); // без таймера
+      showTimer(false);
       if (state.showText) {
         dom.textDisplay.textContent = state.currentText;
         dom.textDisplay.classList.remove('hidden');
@@ -417,7 +500,6 @@ function startCountdown(name, exerciseType, sign = null) {
   let left = state.seconds;
   const total = state.seconds;
 
-  // Для sent_* — добавляем интонационную подсказку
   let hintFile = null;
   if (exerciseType === 'sentences') {
     if (sign === 'plus_long' || sign === 'plus_short') hintFile = 'hint_yes';
@@ -433,14 +515,12 @@ function startCountdown(name, exerciseType, sign = null) {
     dom.textDisplay.classList.add('hidden');
   }
 
-  // Проигрываем интонационную подсказку в начале отсчёта (если есть)
   if (hintFile) {
     playAudioSingle(`${AUDIO_HINTS_DIR}/${hintFile}`, null);
   }
 
   state.countdownTimer = setInterval(() => {
     left--;
-
     if (left > 0) {
       const percent = (left / total) * 100;
       dom.timerBar.style.height = `${percent}%`;
@@ -455,7 +535,6 @@ function startCountdown(name, exerciseType, sign = null) {
         dom.textDisplay.classList.remove('hidden');
       }
 
-      // Проигрываем очередь аудио
       playAudioQueue(() => {
         state.phase = 'ready';
         dom.replayBtn.classList.remove('hidden');
@@ -467,15 +546,15 @@ function startCountdown(name, exerciseType, sign = null) {
 // ============================================================
 //  ЗАГРУЗКА КАРТИНОК
 // ============================================================
-// Пробуем расширения png → jpg, и для новых слов — ещё и additional_words_01
 function loadImage(name, basePath, onSuccess) {
   const tryExt = (extIndex) => {
     if (extIndex >= IMAGE_EXTS.length) {
-      // для новых слов пробуем additional_words_01
       if (!basePath.includes('additional')) {
         loadImage(name, `${ADDITIONAL_DIR}/${name}`, onSuccess);
       } else {
-        if (onSuccess) onSuccess(); // картинки нет — просто показываем пусто
+        dom.cardImage.removeAttribute('src');
+        dom.cardImage.alt = name;
+        if (onSuccess) onSuccess();
       }
       return;
     }
@@ -498,7 +577,6 @@ function loadImage(name, basePath, onSuccess) {
 // ============================================================
 //  АУДИО
 // ============================================================
-// Одиночный аудиофайл (для вопроса, подсказки)
 function playAudioSingle(path, onFinish) {
   const tryExt = (i) => {
     if (i >= AUDIO_EXTS.length) {
@@ -522,7 +600,6 @@ function playAudioSingle(path, onFinish) {
   tryExt(0);
 }
 
-// Очередь аудио (для склейки)
 function playAudioQueue(onFinish) {
   state.phase = 'audio';
   if (state.currentAudioQueue.length === 0) {
@@ -540,7 +617,6 @@ function playAudioQueue(onFinish) {
     const item = state.currentAudioQueue[state.currentAudioIndex];
     const tryExt = (i) => {
       if (i >= AUDIO_EXTS.length) {
-        // файла нет — пропускаем
         state.currentAudioIndex++;
         playNext();
         return;
@@ -571,7 +647,7 @@ function playAudioQueue(onFinish) {
 }
 
 // ============================================================
-//  УТИЛИТЫ ИНТЕРФЕЙСА
+//  УТИЛИТЫ
 // ============================================================
 function showScreen(id) {
   [dom.startScreen, dom.playScreen, dom.endScreen].forEach(s => s.classList.remove('active'));
@@ -597,9 +673,10 @@ function showSoundHint() {
 }
 
 // ============================================================
-//  ОБРАБОТКА ПРОБЕЛА И ТАПОВ
+//  ПРОБЕЛ И ТАПЫ
 // ============================================================
 function handleAction() {
+  if (state.filtering) return;
   if (state.phase === 'start') {
     startRound();
   } else if (state.phase === 'ready') {

@@ -92,7 +92,6 @@ html, body {
 }
 .checkbox-setting { justify-content: flex-start; gap: 8px; cursor: pointer; }
 
-/* Затемнение */
 .overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -123,10 +122,7 @@ html, body {
   cursor: pointer;
   padding: 5px;
 }
-.current-info {
-  font-size: 14px;
-  color: #666;
-}
+.current-info { font-size: 14px; color: #666; }
 
 /* ---------- Сцена ---------- */
 .stage {
@@ -166,7 +162,7 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 }
 
 .image-wrapper {
-  position: relative; /* ОБЯЗАТЕЛЬНО для перечеркивания */
+  position: relative;
   display: inline-block;
   max-width: 80vw;
   max-height: 60vh;
@@ -181,23 +177,21 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   display: block;
 }
 
-/* Перечеркнутая картинка */
 .image-wrapper.crossed-image::after {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   background: linear-gradient(
     to bottom right,
-    transparent calc(50% - 5px), 
-    rgba(220, 53, 69, 0.9) calc(50% - 5px), 
-    rgba(220, 53, 69, 0.9) calc(50% + 5px), 
+    transparent calc(50% - 5px),
+    rgba(220, 53, 69, 0.9) calc(50% - 5px),
+    rgba(220, 53, 69, 0.9) calc(50% + 5px),
     transparent calc(50% + 5px)
   );
   pointer-events: none;
   z-index: 10;
 }
 
-/* Значок для упражнения #1 */
 .card-icon {
   margin-top: 15px;
   display: flex;
@@ -215,7 +209,6 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 .icon-minus { font-size: 55px; color: #dc3545; }
 .icon-question { font-size: 55px; color: #fd7e14; }
 
-/* Текст подсказки/ответа */
 .text-display {
   margin-top: 15px;
   font-size: clamp(18px, 3vw, 32px);
@@ -227,13 +220,12 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
 }
 .text-display.hidden { display: none; }
 
-/* Зачеркнутый текст для Confusables */
 .text-display s {
   color: #dc3545;
   text-decoration-thickness: 3px;
 }
 
-/* ---------- Таймер сбоку (Столбик) ---------- */
+/* ---------- Таймер ---------- */
 .timer {
   position: fixed;
   top: 50%;
@@ -264,10 +256,8 @@ h1 { font-size: clamp(24px, 5vw, 48px); font-weight: 600; margin-bottom: 24px; }
   height: 100%;
   transition: height 1s linear, background-color 0.3s ease;
 }
-
 .timer-bar.danger { background-color: #dc3545; }
 
-/* Кнопка повтора (микрофон) */
 .replay-btn {
   font-size: 32px;
   background: #fff;
