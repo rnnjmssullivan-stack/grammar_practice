@@ -15,6 +15,7 @@ const AUDIO_EXTS = ["mp3", "m4a"];
 
 const reportDiv = document.getElementById('report');
 const statusDiv = document.getElementById('status');
+const startBtn = document.getElementById('startBtn');
 
 function checkImage(basePath) {
   return new Promise(resolve => {
@@ -43,7 +44,8 @@ function checkAudio(basePath) {
         clearTimeout(t);
         resolve(ok);
       };
-      const t = setTimeout(() => { audio.src = ''; i++; tryNext(); }, 800);
+      // Увеличили таймаут до 2000 мс, чтобы аудио точно успело загрузиться
+      const t = setTimeout(() => { audio.src = ''; i++; tryNext(); }, 2000);
       audio.oncanplay = () => finish(true);
       audio.onerror = () => { clearTimeout(t); i++; tryNext(); };
       audio.src = `${basePath}.${AUDIO_EXTS[i]}`;
@@ -57,18 +59,14 @@ function audioBaseForConfusable(w) {
   return w.replace(/_\d+$/, '');
 }
 
-// Какие файлы нужны для каждого упражнения
 function getRequiredFiles(name, exercise) {
   const req = [];
-  
-  // Картинка
   if (exercise === 'confusables') {
     req.push({ type: 'img', path: `${CONFUSABLES_DIR}/${name}`, label: `${name}.jpg` });
   } else {
     req.push({ type: 'img', path: `${IMAGES_DIR}/${name}`, fallback: `${ADDITIONAL_DIR}/${name}`, label: `${name}.png` });
   }
 
-  // Аудио
   if (exercise === 'words') {
     req.push({ type: 'audio', path: `${AUDIO_DIR}/${name}`, label: `${name}.mp3` });
   } else if (exercise === 'sent_long') {
@@ -116,14 +114,13 @@ function getCandidates(exercise) {
 }
 
 async function generateReport() {
+  startBtn.style.display = 'none'; // Прячем кнопку
   const exercises = EXERCISES;
   const result = {};
 
   for (const ex of exercises) {
     const candidates = getCandidates(ex.id);
     const rows = [];
-    
-    // Ограничим количество, чтобы отчёт не висел вечно
     const limit = ex.id === 'confusables' ? candidates.length : Math.min(candidates.length, 50);
 
     for (let i = 0; i < limit; i++) {
@@ -175,4 +172,9 @@ function renderReport(result) {
   reportDiv.innerHTML = html;
 }
 
-generateReport();
+// Запуск проверки по клику
+startBtn.addEventListener('click', () => {
+  statusDiv.textContent = 'Пожалуйста, подождите... / Please wait...';
+  // Даем браузеру 100мс, чтобы обработать клик и разрешить аудио
+  setTimeout(generateReport, 100);
+});
