@@ -1,5 +1,5 @@
 // ============================================================
-//  ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+//  СОСТОЯНИЕ
 // ============================================================
 let state = {
   lang: 'ru',
@@ -7,17 +7,18 @@ let state = {
   lesson: 'all',
   seconds: 5,
   showText: false,
+  showHints: true,
 
   queue: [],
   currentIndex: -1,
   phase: 'start',
   countdownTimer: null,
   audioEl: null,
-  currentAudioObj: null,
   currentAudioQueue: [],
   currentAudioIndex: 0,
   currentText: '',
-  filtering: false
+  filtering: false,
+  preloadedImages: {}
 };
 
 // ============================================================
@@ -49,6 +50,7 @@ const dom = {
   currentLessonTitle: document.getElementById('currentLessonTitle'),
   secondsInput: document.getElementById('secondsInput'),
   showTextToggle: document.getElementById('showTextToggle'),
+  hintsToggle: document.getElementById('hintsToggle'),
   langSelect: document.getElementById('langSelect'),
   startScreen: document.getElementById('startScreen'),
   playScreen: document.getElementById('playScreen'),
@@ -75,6 +77,18 @@ function initUI() {
   if (savedLang) {
     state.lang = savedLang;
     dom.langSelect.value = savedLang;
+  }
+
+  const savedHints = localStorage.getItem('grammar.showHints');
+  if (savedHints !== null) {
+    state.showHints = savedHints === 'true';
+    dom.hintsToggle.checked = state.showHints;
+  }
+
+  const savedText = localStorage.getItem('grammar.showText');
+  if (savedText !== null) {
+    state.showText = savedText === 'true';
+    dom.showTextToggle.checked = state.showText;
   }
 
   renderMenus();
@@ -171,6 +185,12 @@ dom.secondsInput.addEventListener('change', () => {
 
 dom.showTextToggle.addEventListener('change', () => {
   state.showText = dom.showTextToggle.checked;
+  localStorage.setItem('grammar.showText', state.showText);
+});
+
+dom.hintsToggle.addEventListener('change', () => {
+  state.showHints = dom.hintsToggle.checked;
+  localStorage.setItem('grammar.showHints', state.showHints);
 });
 
 dom.langSelect.addEventListener('change', () => {
@@ -195,7 +215,7 @@ dom.closeBtn.onclick = closeSidebar;
 dom.overlay.onclick = closeSidebar;
 
 // ============================================================
-//  ПРОВЕРКА НАЛИЧИЯ ФАЙЛОВ
+//  ПРОВЕРКА И ПРЕДЗАГРУЗКА
 // ============================================================
 function checkImage(basePath) {
   return new Promise(resolve => {
@@ -203,7 +223,7 @@ function checkImage(basePath) {
     const tryNext = () => {
       if (i >= IMAGE_EXTS.length) { resolve(false); return; }
       const img = new Image();
-      img.onload = () => resolve(true);
+      img.onload = () => { state.preloadedImages[`${basePath}.${IMAGE_EXTS[i]}`] = img; resolve(true); };
       img.onerror = () => { i++; tryNext(); };
       img.src = `${basePath}.${IMAGE_EXTS[i]}`;
     };
@@ -217,8 +237,15 @@ function checkAudio(basePath) {
     const tryNext = () => {
       if (i >= AUDIO_EXTS.length) { resolve(false); return; }
       const audio = new Audio();
-      const t = setTimeout(() => { audio.src = ''; i++; tryNext(); }, 1500);
-      audio.oncanplaythrough = () => { clearTimeout(t); resolve(true); };
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        resolve(ok);
+      };
+      const t = setTimeout(() => { audio.src = ''; i++; tryNext(); }, 800);
+      audio.oncanplay = () => finish(true);
       audio.onerror = () => { clearTimeout(t); i++; tryNext(); };
       audio.src = `${basePath}.${AUDIO_EXTS[i]}`;
       audio.load();
@@ -227,7 +254,6 @@ function checkAudio(basePath) {
   });
 }
 
-// Для confusables: имя wrong-слова для аудио (hat_1 → hat)
 function audioBaseForConfusable(w) {
   return w.replace(/_\d+$/, '');
 }
@@ -242,19 +268,19 @@ async function isWordAvailable(name, exercise) {
   }
   if (!imgOk) return false;
 
-  if (exercise === 'words') {
-    return await checkAudio(`${AUDIO_DIR}/${name}`);
-  }
+  if (exercise === 'words') return await checkAudio(`${AUDIO_DIR}/${name}`);
   if (exercise === 'sent_long')  return await checkAudio(`${AUDIO_DIR}/${name} - It_is`);
   if (exercise === 'sent_short') return await checkAudio(`${AUDIO_DIR}/${name} - Its`);
   if (exercise === 'sent_neg')   return await checkAudio(`${AUDIO_DIR}/${name} - It_isnt`);
   if (exercise === 'sent_quest') return await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
   if (exercise === 'sent_mix') {
-    const a = await checkAudio(`${AUDIO_DIR}/${name} - It_is`);
-    const b = await checkAudio(`${AUDIO_DIR}/${name} - Its`);
-    const c = await checkAudio(`${AUDIO_DIR}/${name} - It_isnt`);
-    const d = await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
-    return a && b && c && d;
+    const checks = await Promise.all([
+      checkAudio(`${AUDIO_DIR}/${name} - It_is`),
+      checkAudio(`${AUDIO_DIR}/${name} - Its`),
+      checkAudio(`${AUDIO_DIR}/${name} - It_isnt`),
+      checkAudio(`${AUDIO_DIR}/${name} - Is_it`)
+    ]);
+    return checks.every(Boolean);
   }
   if (exercise === 'confusables') {
     const wrongs = CONFUSABLES_PAIRS[name] || [];
@@ -268,16 +294,20 @@ async function isWordAvailable(name, exercise) {
     return false;
   }
   if (exercise === 'ans_yes') {
-    const q = await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
-    const s = await checkAudio(`${AUDIO_SHORT_DIR}/short_ans_yes`);
-    const e = await checkAudio(`${AUDIO_EMPHATIC_DIR}/${name}_ItIS`);
-    return q && s && e;
+    const checks = await Promise.all([
+      checkAudio(`${AUDIO_DIR}/${name} - Is_it`),
+      checkAudio(`${AUDIO_SHORT_DIR}/short_ans_yes`),
+      checkAudio(`${AUDIO_EMPHATIC_DIR}/${name}_ItIS`)
+    ]);
+    return checks.every(Boolean);
   }
   if (exercise === 'ans_no') {
-    const q = await checkAudio(`${AUDIO_DIR}/${name} - Is_it`);
-    const s = await checkAudio(`${AUDIO_SHORT_DIR}/short_ans_no`);
-    const a = await checkAudio(`${AUDIO_DIR}/${name} - Its`);
-    return q && s && a;
+    const checks = await Promise.all([
+      checkAudio(`${AUDIO_DIR}/${name} - Is_it`),
+      checkAudio(`${AUDIO_SHORT_DIR}/short_ans_no`),
+      checkAudio(`${AUDIO_DIR}/${name} - Its`)
+    ]);
+    return checks.every(Boolean);
   }
   if (exercise === 'ans_chain') {
     return await checkAudio(`${AUDIO_DIR}/${name} - Negation_chain`);
@@ -286,7 +316,7 @@ async function isWordAvailable(name, exercise) {
 }
 
 // ============================================================
-//  ЛОГИКА РАУНДА
+//  РАУНД
 // ============================================================
 function getActiveWords() {
   if (state.lesson === 'all') {
@@ -338,11 +368,12 @@ async function startRound() {
     candidates = [...new Set(getActiveWords())];
   }
 
-  const available = [];
-  for (const name of candidates) {
-    const ok = await isWordAvailable(name, state.exercise);
-    if (ok) available.push(name);
-  }
+  // Параллельная проверка всех кандидатов
+  const checks = candidates.map(name => 
+    isWordAvailable(name, state.exercise).then(ok => ({ name, ok }))
+  );
+  const results = await Promise.all(checks);
+  const available = results.filter(r => r.ok).map(r => r.name);
 
   state.filtering = false;
 
@@ -377,6 +408,10 @@ function nextCard() {
 
   // ---------- 0. WORDS ----------
   if (state.exercise === 'words') {
+    state.currentText = AFFIRMATIVE_SHORT[name] || name;
+    state.currentAudioQueue = [{ dir: AUDIO_DIR, name: name }];
+    state.currentAudioIndex = 0;
+
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
       startCountdown(name, 'words');
@@ -393,6 +428,16 @@ function nextCard() {
     else if (state.exercise === 'sent_short') sign = 'plus_short';
     else if (state.exercise === 'sent_neg') sign = 'minus';
     else if (state.exercise === 'sent_quest') sign = 'question';
+
+    let audioSuffix = '', text = '';
+    if (sign === 'plus_long') { audioSuffix = 'It_is'; text = AFFIRMATIVE_LONG[name] || ''; }
+    else if (sign === 'plus_short') { audioSuffix = 'Its'; text = AFFIRMATIVE_SHORT[name] || ''; }
+    else if (sign === 'minus') { audioSuffix = 'It_isnt'; text = NEGATIVE[name] || ''; }
+    else { audioSuffix = 'Is_it'; text = QUESTION[name] || ''; }
+
+    state.currentText = text;
+    state.currentAudioQueue = [{ dir: AUDIO_DIR, name: `${name} - ${audioSuffix}` }];
+    state.currentAudioIndex = 0;
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
@@ -413,19 +458,22 @@ function nextCard() {
   else if (state.exercise === 'confusables') {
     const wrongs = CONFUSABLES_PAIRS[name] || [];
     const wrong = wrongs[Math.floor(Math.random() * wrongs.length)];
+    const base = audioBaseForConfusable(wrong);
 
-    const wrongText = NEGATIVE[wrong] || `It isn't ${wrong}.`;
+    const wrongWordText = wrong.replace(/_\d+$/, '').replace(/_/g, ' ');
     const rightText = AFFIRMATIVE_SHORT[name] || `It's ${name}.`;
+    const fullText = `It isn't ${wrongWordText}. ${rightText}`;
 
-    dom.textDisplay.innerHTML = `<s>${wrongText}</s>`;
+    // Показываем только зачеркнутое слово
+    dom.textDisplay.innerHTML = `<s>${wrongWordText}</s>`;
     dom.textDisplay.classList.remove('hidden');
 
+    state.currentText = fullText;
     state.currentAudioQueue = [
-      { dir: AUDIO_DIR, name: `${audioBaseForConfusable(wrong)} - It_isnt` },
+      { dir: AUDIO_DIR, name: `${base} - It_isnt` },
       { dir: AUDIO_DIR, name: `${name} - Its` }
     ];
     state.currentAudioIndex = 0;
-    state.currentText = `${wrongText} ${rightText}`;
 
     loadImage(name, `${CONFUSABLES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
@@ -435,12 +483,12 @@ function nextCard() {
 
   // ---------- 3.1 ANS YES ----------
   else if (state.exercise === 'ans_yes') {
+    state.currentText = `Yes, it IS. ${AFFIRMATIVE_LONG[name] || ''}`;
     state.currentAudioQueue = [
       { dir: AUDIO_SHORT_DIR, name: 'short_ans_yes' },
       { dir: AUDIO_EMPHATIC_DIR, name: `${name}_ItIS` }
     ];
     state.currentAudioIndex = 0;
-    state.currentText = `Yes, it IS. ${AFFIRMATIVE_LONG[name] || ''}`;
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
@@ -452,12 +500,12 @@ function nextCard() {
 
   // ---------- 3.2 ANS NO ----------
   else if (state.exercise === 'ans_no') {
+    state.currentText = `No, it isn't. ${AFFIRMATIVE_SHORT[name] || ''}`;
     state.currentAudioQueue = [
       { dir: AUDIO_SHORT_DIR, name: 'short_ans_no' },
       { dir: AUDIO_DIR, name: `${name} - Its` }
     ];
     state.currentAudioIndex = 0;
-    state.currentText = `No, it isn't. ${AFFIRMATIVE_SHORT[name] || ''}`;
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
@@ -469,11 +517,9 @@ function nextCard() {
 
   // ---------- 3.3 ANS CHAIN ----------
   else if (state.exercise === 'ans_chain') {
-    state.currentAudioQueue = [
-      { dir: AUDIO_DIR, name: `${name} - Negation_chain` }
-    ];
-    state.currentAudioIndex = 0;
     state.currentText = `It isn't ... It's not ... It is NOT ...`;
+    state.currentAudioQueue = [{ dir: AUDIO_DIR, name: `${name} - Negation_chain` }];
+    state.currentAudioIndex = 0;
 
     loadImage(name, `${IMAGES_DIR}/${name}`, () => {
       dom.cardImage.style.visibility = 'visible';
@@ -501,7 +547,7 @@ function startCountdown(name, exerciseType, sign = null) {
   const total = state.seconds;
 
   let hintFile = null;
-  if (exerciseType === 'sentences') {
+  if (exerciseType === 'sentences' && state.showHints) {
     if (sign === 'plus_long' || sign === 'plus_short') hintFile = 'hint_yes';
     else if (sign === 'minus') hintFile = 'hint_no';
     else hintFile = 'hint_questionYN';
@@ -585,16 +631,24 @@ function playAudioSingle(path, onFinish) {
     }
     const src = `${path}.${AUDIO_EXTS[i]}`;
     const audio = new Audio();
-    audio.oncanplaythrough = () => {
-      state.audioEl = audio;
-      audio.play().then(() => {
-        audio.onended = () => { if (onFinish) onFinish(); };
-      }).catch(() => {
-        showSoundHint();
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      if (ok) {
+        state.audioEl = audio;
+        audio.play().then(() => {
+          audio.onended = () => { if (onFinish) onFinish(); };
+        }).catch(() => {
+          showSoundHint();
+          if (onFinish) onFinish();
+        });
+      } else {
         if (onFinish) onFinish();
-      });
+      }
     };
-    audio.onerror = () => tryExt(i + 1);
+    audio.oncanplay = () => finish(true);
+    audio.onerror = () => { done = true; tryExt(i + 1); };
     audio.src = src;
   };
   tryExt(0);
@@ -602,12 +656,6 @@ function playAudioSingle(path, onFinish) {
 
 function playAudioQueue(onFinish) {
   state.phase = 'audio';
-  if (state.currentAudioQueue.length === 0) {
-    state.phase = 'ready';
-    if (onFinish) onFinish();
-    return;
-  }
-
   const playNext = () => {
     if (state.currentAudioIndex >= state.currentAudioQueue.length) {
       state.phase = 'ready';
@@ -623,27 +671,44 @@ function playAudioQueue(onFinish) {
       }
       const src = `${item.dir}/${item.name}.${AUDIO_EXTS[i]}`;
       const audio = new Audio();
-      audio.oncanplaythrough = () => {
-        state.currentAudioObj = audio;
-        state.audioEl = audio;
-        audio.play().then(() => {
-          audio.onended = () => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        if (ok) {
+          state.audioEl = audio;
+          audio.play().then(() => {
+            audio.onended = () => {
+              state.currentAudioIndex++;
+              playNext();
+            };
+          }).catch(() => {
+            showSoundHint();
             state.currentAudioIndex++;
             playNext();
-          };
-        }).catch(() => {
-          showSoundHint();
+          });
+        } else {
           state.currentAudioIndex++;
           playNext();
-        });
+        }
       };
-      audio.onerror = () => tryExt(i + 1);
+      audio.oncanplay = () => finish(true);
+      audio.onerror = () => { done = true; tryExt(i + 1); };
       audio.src = src;
     };
     tryExt(0);
   };
-
   playNext();
+}
+
+function replayCurrentAudio() {
+  if (state.currentAudioQueue.length === 0) return;
+  if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
+  state.currentAudioIndex = 0;
+  playAudioQueue(() => {
+    state.phase = 'ready';
+    dom.replayBtn.classList.remove('hidden');
+  });
 }
 
 // ============================================================
@@ -707,10 +772,7 @@ document.addEventListener('pointerdown', (e) => {
 // ============================================================
 dom.replayBtn.addEventListener('pointerdown', (e) => {
   e.stopPropagation();
-  if (state.currentAudioObj) {
-    state.currentAudioObj.currentTime = 0;
-    state.currentAudioObj.play().catch(() => {});
-  }
+  replayCurrentAudio();
 });
 
 // ============================================================

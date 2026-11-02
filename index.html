@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- Боковая панель (Меню) -->
   <div id="sidebar" class="sidebar">
     <div class="sidebar-header">
       <h2>Меню / Menu</h2>
@@ -35,6 +34,10 @@
         <input type="checkbox" id="showTextToggle">
         <span>Показывать текст / Show text</span>
       </label>
+      <label class="setting checkbox-setting">
+        <input type="checkbox" id="hintsToggle" checked>
+        <span>Аудио-подсказки / Audio hints</span>
+      </label>
       <label class="setting">
         <span>Язык / Lang:</span>
         <select id="langSelect">
@@ -45,10 +48,8 @@
     </div>
   </div>
 
-  <!-- Затемнение фона при открытом меню -->
   <div id="sidebarOverlay" class="overlay"></div>
 
-  <!-- Верхняя панель с кнопкой меню -->
   <header class="topbar">
     <button id="openSidebar" class="menu-btn">☰</button>
     <div class="current-info">
@@ -56,9 +57,7 @@
     </div>
   </header>
 
-  <!-- Сцена -->
   <main class="stage">
-    <!-- Стартовый экран -->
     <section id="startScreen" class="screen active">
       <h1>🎯 Grammar Practice</h1>
       <p class="hint">
@@ -67,7 +66,6 @@
       </p>
     </section>
 
-    <!-- Экран с карточкой -->
     <section id="playScreen" class="screen">
       <div class="card-container">
         <div class="image-wrapper">
@@ -78,7 +76,6 @@
       </div>
     </section>
 
-    <!-- Финал -->
     <section id="endScreen" class="screen">
       <h1>Do you want to start a new round?</h1>
       <p class="hint">
@@ -87,7 +84,6 @@
       </p>
     </section>
 
-    <!-- Сбоку таймер -->
     <aside id="timerBox" class="timer hidden">
       <button id="replayBtn" class="replay-btn" title="Повторить звук / Repeat audio">🔊</button>
       <div class="timer-bar-container">
